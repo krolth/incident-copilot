@@ -11,6 +11,22 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-25: gpt-oss structured-output failures, retries, reasoning effort
+- **Surprise / failure:** the multi-agent smoke run on s01 died in a worker. gpt-oss:20b on Ollama fails three ways,
+  intermittently: (1) empty reply after hidden reasoning, (2) malformed JSON, (3) the Ollama server raising
+  "error parsing tool call", which crashed the ReAct loop because nothing caught it there.
+- **Evidence:** replayed the final `Finding` call on 6 saved worker histories (scratch experiment, not eval data):
+  default reasoning failed 10/120 (8.3%); `reasoning="low"` failed 0/120 (Fisher p ~ 0.002), and used ~25% fewer
+  output tokens. `method="function_calling"` failed 30/30 with this model.
+- **Decision:** `LLM_REASONING=low` for the agent, same for every approach (recorded in `meta.json`). Judge keeps its
+  default until its speed and agreement with hand labels are measured.
+- **Trade-off:** low effort may make the agent investigate less thoroughly. That is part of the configuration being
+  tested, not a bias between approaches; state it in the write-up.
+- **Decision:** every model call (tool-loop steps and typed answers) retries up to 3 times with exponential backoff and
+  full jitter (1, 2, 4 s caps, max 30 s); only then does the run fail. Web APIs fail transiently too.
+- **Why it's still honest:** each retry is a trace event and `retries` is a report column; failed runs stay in
+  `runs.jsonl`; the runner now refuses to overwrite real results; judge tokens and retries are stored per run.
+
 ## 2026-10-25: local models via Ollama, and how to price them
 - **Decision:** agent `gpt-oss:20b`, judge `qwen3.8:27b`, embeddings `nomic-embed-text`, all on Ollama (M4 Pro, 48 GB).
 - **Why:** agent is a mixture-of-experts model (~3.6B active), so 108+ runs stay fast; judge is a different family

@@ -20,7 +20,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from triage.approaches import APPROACHES
-from triage.approaches.common import execute
+from triage.approaches.common import BACKOFF_BASE_S, BACKOFF_CAP_S, MAX_RETRIES, UsageTracker, execute
+from triage.env import Trace
 from triage.evals.judge import judge_run
 from triage.evals.scoring import load_pricing, score_run
 from triage.scenarios import all_scenarios, fingerprint
@@ -36,6 +37,9 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     runs_path = out / "runs.jsonl"
+    if runs_path.exists() and not resume and not fake:
+        # every real run is evaluation data, including failures: never overwrite it silently
+        raise SystemExit(f"{runs_path} already has runs. Use --resume to add to it, or --out for a new folder.")
     scenarios = [s for s in all_scenarios() if not scenario_ids or s.id in scenario_ids or any(s.id.startswith(x) for x in scenario_ids)]
     if not scenarios:
         raise SystemExit(f"no scenarios match {scenario_ids}")
@@ -75,10 +79,15 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
         rec["score"] = score_run(sc, rec, model_name, pricing)
         rec["judge"] = None
         if judge and rec["result"] is not None:
+            jtrace = Trace()
+            jtracker = UsageTracker(jtrace)
             try:
-                rec["judge"] = judge_run(judge_llm_for(sc), sc, rec)
+                rec["judge"] = judge_run(judge_llm_for(sc), sc, rec, jtracker)
             except Exception as exc:  # noqa: BLE001
                 rec["judge_error"] = f"{type(exc).__name__}: {exc}"
+            # kept even when the judge failed: evaluation overhead (tokens, retries) is reported separately
+            rec["judge_usage"] = jtracker.as_dict()
+            rec["judge_trace"] = jtrace.events
         rec["fake"] = fake
         with lock:
             records.append(rec)
@@ -96,6 +105,8 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
     meta = {"timestamp": dt.datetime.now(dt.timezone.utc).isoformat(), "fake": fake, "fake_mode": fake_mode if fake else None,
             "model": model_name, "judge_model": "fake-oracle" if fake else describe()["judge_model"],
             "embeddings": "hash" if fake else describe()["embeddings"], "scenario_fingerprint": fingerprint(),
+            "llm_settings": None if fake else {k: describe()[k] for k in ("provider", "reasoning", "judge_reasoning", "num_ctx")},
+            "retry_policy": {"max_retries": MAX_RETRIES, "backoff_base_s": BACKOFF_BASE_S, "backoff_cap_s": BACKOFF_CAP_S},
             "approaches": approaches, "runs_per_cell": runs, "max_steps": max_steps,
             "scenarios": [s.id for s in scenarios], "note": FAKE_BANNER if fake else ""}
     (out / "meta.json").write_text(json.dumps(meta, indent=2))

@@ -25,10 +25,11 @@ def build_judge_input(sc: Scenario, rec: dict) -> str:
             f"Evidence the agent cited (text as shown to the agent):\n{evidence}")
 
 
-def judge_run(judge_llm, sc: Scenario, rec: dict) -> dict | None:
+def judge_run(judge_llm, sc: Scenario, rec: dict, tracker: UsageTracker | None = None) -> dict | None:
+    """Pass a tracker to keep the judge's tokens and retries (the runner stores them with the run)."""
     if rec.get("result") is None:
         return None
-    tracker = UsageTracker()
+    tracker = tracker or UsageTracker()
     v = structured_call(judge_llm, JudgeVerdict, [SystemMessage(content=JUDGE_SYSTEM), HumanMessage(content=build_judge_input(sc, rec))], tracker)
     return {"action_alignment": max(0, min(2, v.action_alignment)), "evidence_support": max(0, min(2, v.evidence_support)),
             "reasoning": v.reasoning}

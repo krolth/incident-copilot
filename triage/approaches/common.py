@@ -1,6 +1,7 @@
 """Shared plumbing for all approaches: usage tracking, structured calls, and the RunRecord."""
 from __future__ import annotations
 
+import random
 import threading
 import time
 import traceback
@@ -21,7 +22,8 @@ class UsageTracker(BaseCallbackHandler):
         self.input_tokens = 0
         self.output_tokens = 0
         self.llm_calls = 0
-        self.retries = 0  # structured calls re-asked after a parse/validation failure
+        self.retries = 0  # model calls re-tried after an error (see with_retries)
+        self.llm_errors = 0  # calls the provider/server failed outright (no tokens are reported for these)
         self.trace = trace
         self._lock = threading.Lock()
 
@@ -40,32 +42,61 @@ class UsageTracker(BaseCallbackHandler):
         if self.trace:
             self.trace.add(type="llm", input_tokens=i, output_tokens=o)
 
+    def on_llm_error(self, error, **kwargs) -> None:  # noqa: ANN001
+        with self._lock:
+            self.llm_errors += 1
+
     def as_dict(self) -> dict:
         return {"input_tokens": self.input_tokens, "output_tokens": self.output_tokens, "llm_calls": self.llm_calls,
-                "retries": self.retries}
+                "retries": self.retries, "llm_errors": self.llm_errors}
 
 
-def structured_call(llm, schema, messages: list[BaseMessage], tracker: UsageTracker, retries: int = 1):
-    """Call the model for a typed answer; retry once on a parse/validation failure.
+# Retry policy for EVERY model call (tool-loop steps and typed answers alike). Model servers fail
+# transiently: Ollama sometimes cannot parse gpt-oss's tool call, a model returns an empty reply, a web API
+# rate-limits or goes down. One such blip should not decide a run, so a call is retried up to MAX_RETRIES
+# times; only then does it fail the run (which is still recorded, as a failed run). Every retry is written
+# to the trace, so nothing is hidden: retries are reported per run.
+MAX_RETRIES = 3
+BACKOFF_BASE_S = 1.0
+BACKOFF_CAP_S = 30.0
 
-    Each retry is counted and written to the trace: it costs tokens and is itself a signal about the model.
+
+def backoff_s(attempt: int) -> float:
+    """Exponential backoff with full jitter: uniform(0, min(cap, base * 2**attempt)).
+
+    Jitter spreads out parallel runs that failed together, so they don't all hit the server again at once.
     """
-    runnable = llm.with_structured_output(schema)
-    last: Exception | None = None
-    for attempt in range(retries + 1):
-        if attempt:
+    return random.uniform(0, min(BACKOFF_CAP_S, BACKOFF_BASE_S * 2 ** attempt))
+
+
+def with_retries(call, tracker: UsageTracker, where: str):
+    """Run call(); on any exception wait (backoff_s) and retry, up to MAX_RETRIES times, then re-raise."""
+    for attempt in range(MAX_RETRIES + 1):
+        try:
+            return call()
+        except Exception as exc:  # noqa: BLE001 - provider, server and parser errors vary; all are retried
+            if attempt == MAX_RETRIES:
+                raise
+            wait = backoff_s(attempt)
             with tracker._lock:  # multi-agent workers share one tracker across threads
                 tracker.retries += 1
             if tracker.trace:
-                tracker.trace.add(type="retry", schema=schema.__name__, error=f"{type(last).__name__}: {last}"[:500])
-        try:
-            out = runnable.invoke(messages, {"callbacks": [tracker]})
-            if out is not None:
-                return out
-            last = ValueError("model returned no structured output")
-        except Exception as exc:  # noqa: BLE001 - provider and parser errors vary; the retry covers them
-            last = exc
-    raise last  # type: ignore[misc]
+                tracker.trace.add(type="retry", where=where, attempt=attempt + 1, wait_s=round(wait, 2),
+                                  error=f"{type(exc).__name__}: {exc}"[:500])
+            time.sleep(wait)
+
+
+def structured_call(llm, schema, messages: list[BaseMessage], tracker: UsageTracker):
+    """Call the model for a typed answer, retrying failures (see with_retries)."""
+    runnable = llm.with_structured_output(schema)
+
+    def once():
+        out = runnable.invoke(messages, {"callbacks": [tracker]})
+        if out is None:
+            raise ValueError("model returned no structured output")
+        return out
+
+    return with_retries(once, tracker, where=schema.__name__)
 
 
 @dataclass

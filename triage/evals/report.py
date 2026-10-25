@@ -38,8 +38,8 @@ def build_report(out_dir: str) -> str:
           f"- scenario fingerprint: `{meta.get('scenario_fingerprint')}`  runs per cell: {meta.get('runs_per_cell')}  timestamp: {meta.get('timestamp')}", ""]
 
     L += ["## By approach", "",
-          "| approach | runs | valid | category acc | abstention ok | runbook acc | judge action (0-2) | judge evidence (0-2) | citation valid | key evidence cited | tool calls | LLM calls | tokens in/out | cost/run | latency s |",
-          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| approach | runs | valid | category acc | abstention ok | runbook acc | judge action (0-2) | judge evidence (0-2) | citation valid | key evidence cited | tool calls | LLM calls | retries/run | tokens in/out | cost/run | latency s |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for app in sorted(by_app):
         rs = by_app[app]
         s = [r["score"] for r in rs]
@@ -50,10 +50,12 @@ def build_report(out_dir: str) -> str:
             _fmt(_mean([x["action_alignment"] for x in j])), _fmt(_mean([x["evidence_support"] for x in j])),
             _fmt(_mean([x["citation_valid_rate"] for x in s]), True), _fmt(_mean([x["key_cited"] for x in s]), True),
             _fmt(_mean([x["tool_calls"] for x in s]), nd=1), _fmt(_mean([x["llm_calls"] for x in s]), nd=1),
+            _fmt(_mean([x.get("retries", 0) for x in s]), nd=2),
             f"{_mean([x['input_tokens'] for x in s]):.0f}/{_mean([x['output_tokens'] for x in s]):.0f}",
             ("$" + _fmt(_mean([x["cost_usd"] for x in s]), nd=4)) if _mean([x["cost_usd"] for x in s]) is not None else "n/a",
             _fmt(_mean([x["latency_s"] for x in s]), nd=1)]) + " |")
-    L += ["", "Judge columns are only meaningful once judge/human agreement has been measured (`python -m triage.evals.labels agreement`).", ""]
+    L += ["", "retries/run: model calls re-tried after an error (empty or invalid reply, server error); see `with_retries`.",
+          "Judge columns are only meaningful once judge/human agreement has been measured (`python -m triage.evals.labels agreement`).", ""]
 
     # variance across repeats: accuracy of each repeat index, then spread
     L += ["## Run-to-run variance (category accuracy per repeat)", "", "| approach | per-repeat accuracy | std dev |", "|---|---|---|"]
