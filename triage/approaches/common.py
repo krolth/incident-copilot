@@ -21,6 +21,7 @@ class UsageTracker(BaseCallbackHandler):
         self.input_tokens = 0
         self.output_tokens = 0
         self.llm_calls = 0
+        self.retries = 0  # structured calls re-asked after a parse/validation failure
         self.trace = trace
         self._lock = threading.Lock()
 
@@ -40,14 +41,23 @@ class UsageTracker(BaseCallbackHandler):
             self.trace.add(type="llm", input_tokens=i, output_tokens=o)
 
     def as_dict(self) -> dict:
-        return {"input_tokens": self.input_tokens, "output_tokens": self.output_tokens, "llm_calls": self.llm_calls}
+        return {"input_tokens": self.input_tokens, "output_tokens": self.output_tokens, "llm_calls": self.llm_calls,
+                "retries": self.retries}
 
 
 def structured_call(llm, schema, messages: list[BaseMessage], tracker: UsageTracker, retries: int = 1):
-    """Call the model for a typed answer; retry once on a parse/validation failure."""
+    """Call the model for a typed answer; retry once on a parse/validation failure.
+
+    Each retry is counted and written to the trace: it costs tokens and is itself a signal about the model.
+    """
     runnable = llm.with_structured_output(schema)
     last: Exception | None = None
-    for _ in range(retries + 1):
+    for attempt in range(retries + 1):
+        if attempt:
+            with tracker._lock:  # multi-agent workers share one tracker across threads
+                tracker.retries += 1
+            if tracker.trace:
+                tracker.trace.add(type="retry", schema=schema.__name__, error=f"{type(last).__name__}: {last}"[:500])
         try:
             out = runnable.invoke(messages, {"callbacks": [tracker]})
             if out is not None:

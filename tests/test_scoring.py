@@ -53,3 +53,9 @@ def test_cost_requires_listed_prices():
 def test_kappa():
     assert cohen_kappa([0, 1, 2, 2], [0, 1, 2, 2]) == 1.0
     assert cohen_kappa([], []) is None
+
+
+def test_retries_reach_the_score(retriever):
+    _, rec, _ = run("s01", "correct", retriever)
+    rec["usage"]["retries"] = 2
+    assert score_run(get_scenario("s01"), rec)["retries"] == 2

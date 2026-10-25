@@ -59,7 +59,8 @@ def score_run(sc: Scenario, rec: dict, model: str = "", pricing: dict | None = N
     res = rec.get("result")
     out: dict = {"valid": res is not None, "tool_calls": len(rec.get("calls", [])), "latency_s": rec.get("latency_s", 0.0),
                  "input_tokens": rec.get("usage", {}).get("input_tokens", 0), "output_tokens": rec.get("usage", {}).get("output_tokens", 0),
-                 "llm_calls": rec.get("usage", {}).get("llm_calls", 0), "cost_usd": cost_usd(rec.get("usage", {}), model, pricing or {})}
+                 "llm_calls": rec.get("usage", {}).get("llm_calls", 0), "retries": rec.get("usage", {}).get("retries", 0),
+                 "cost_usd": cost_usd(rec.get("usage", {}), model, pricing or {})}
     key = key_evidence(sc)
     seen = set(rec.get("seen_ids", []))
     out["key_seen"] = round(sum(_hit(k, m, seen) for k, m in key) / len(key), 3) if key else None

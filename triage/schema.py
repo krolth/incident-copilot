@@ -9,7 +9,7 @@ JSON-schema modes reject optional fields; if one rejects a schema, simplify it h
 from __future__ import annotations
 
 from enum import Enum
-from typing import Literal
+from typing import Literal, get_args
 
 from pydantic import BaseModel, Field
 
@@ -51,7 +51,10 @@ Runbooks (cite the id in recommended_runbook):
 - RB-08 Escalate with insufficient evidence (page a service engineer with findings)
 """
 
-RUNBOOK_IDS = [f"RB-0{i}" for i in range(1, 9)]
+# A Literal (not str) so structured output can only emit a bare id. With str, a model wrote
+# "RB-01 Revert a bad deploy..." and exact-match scoring marked the right runbook wrong.
+RunbookId = Literal["RB-01", "RB-02", "RB-03", "RB-04", "RB-05", "RB-06", "RB-07", "RB-08"]
+RUNBOOK_IDS = list(get_args(RunbookId))
 
 
 class Alert(BaseModel):
@@ -75,7 +78,7 @@ class TriageResult(BaseModel):
     component: str = Field(description="The failing service, host, or credential, e.g. 'matchmaking-svc'; 'unknown' if insufficient_evidence.")
     summary: str = Field(description="Two to four sentences: what is wrong and why, grounded in the evidence.")
     evidence_ids: list[str] = Field(description="Ids copied exactly from tool output that support the diagnosis, e.g. L0231, D2, M:svc:metric:1h, K:RB-01#0.")
-    recommended_runbook: str = Field(description="One of RB-01 .. RB-08.")
+    recommended_runbook: RunbookId = Field(description="The runbook id only, e.g. RB-01.")
     recommended_action: str = Field(description="The concrete next action for the on-call engineer, one or two sentences.")
     confidence: Literal["low", "medium", "high"]
 
