@@ -1,0 +1,125 @@
+"""Run scenarios x approaches x repeats, score and judge each run, and write the results.
+
+  python -m triage.evals.runner --runs 3                 real model (needs LLM_MODEL, JUDGE_MODEL, keys, built index)
+  python -m triage.evals.runner --fake                   offline plumbing check with the scripted oracle -> results_fake/
+  python -m triage.evals.runner --fake --fake-mode wrong
+
+Output directory contains runs.jsonl (one record per run: result, trace, score, judge), meta.json
+(timestamp, model names, scenario fingerprint, settings). --resume skips runs already in runs.jsonl,
+so a rate-limit crash costs only the unfinished runs. Fake output is stamped and kept in its own folder:
+it must never be quoted as a result.
+"""
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import json
+import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+
+from triage.approaches import APPROACHES
+from triage.approaches.common import execute
+from triage.evals.judge import judge_run
+from triage.evals.scoring import load_pricing, score_run
+from triage.scenarios import all_scenarios, fingerprint
+from triage.testing.fake_llm import FAKE_BANNER, oracle_llm
+
+
+def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None, runs: int, *, fake: bool = False,
+            fake_mode: str = "correct", persist_dir: str = "chroma_db", judge: bool = True, parallel: int = 2,
+            resume: bool = False, max_steps: int = 8, model_name: str = "") -> list[dict]:
+    from triage.knowledge.index import build_index, load_index
+    from triage.llm import describe, get_judge_llm, get_llm
+
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    runs_path = out / "runs.jsonl"
+    scenarios = [s for s in all_scenarios() if not scenario_ids or s.id in scenario_ids or any(s.id.startswith(x) for x in scenario_ids)]
+    if not scenarios:
+        raise SystemExit(f"no scenarios match {scenario_ids}")
+
+    if fake:
+        print(f"*** {FAKE_BANNER} ***")
+        retriever = build_index(tempfile.mkdtemp() + "/chroma", include_corpus=False, embeddings_kind="hash")
+        model_name = "fake-oracle"
+        llm_for = lambda sc: oracle_llm(sc, fake_mode)  # noqa: E731
+        judge_llm_for = lambda sc: oracle_llm(sc, "correct")  # noqa: E731
+        (out / "FAKE_RUN_NOT_EVALUATION_DATA.txt").write_text(FAKE_BANNER + "\n")
+    else:
+        retriever = load_index(persist_dir)
+        llm = get_llm()
+        jl = get_judge_llm() if judge else None
+        llm_for = lambda sc: llm  # noqa: E731
+        judge_llm_for = lambda sc: jl  # noqa: E731
+        model_name = model_name or describe()["model"]
+
+    pricing = load_pricing()
+    done: set[tuple] = set()
+    records: list[dict] = []
+    if resume and runs_path.exists():
+        for line in runs_path.read_text().splitlines():
+            if line.strip():
+                r = json.loads(line)
+                records.append(r)
+                done.add((r["scenario_id"], r["approach"], r["run_idx"]))
+
+    jobs = [(sc, a, i) for sc in scenarios for a in approaches for i in range(runs) if (sc.id, a, i) not in done]
+    lock = threading.Lock()
+    f = open(runs_path, "a" if resume else "w")
+
+    def work(job):
+        sc, app, i = job
+        rec = execute(APPROACHES[app], app, sc, llm_for(sc), retriever, i, {"max_steps": max_steps}).to_json()
+        rec["score"] = score_run(sc, rec, model_name, pricing)
+        rec["judge"] = None
+        if judge and rec["result"] is not None:
+            try:
+                rec["judge"] = judge_run(judge_llm_for(sc), sc, rec)
+            except Exception as exc:  # noqa: BLE001
+                rec["judge_error"] = f"{type(exc).__name__}: {exc}"
+        rec["fake"] = fake
+        with lock:
+            records.append(rec)
+            f.write(json.dumps(rec) + "\n")
+            f.flush()
+            print(f"[{len(records)}/{len(jobs) + len(done)}] {sc.id} {app} #{i} "
+                  f"{'ERROR ' + rec['error'][:80] if rec['error'] else rec['result']['category']} "
+                  f"cat_ok={rec['score']['category_correct']}")
+        return rec
+
+    with ThreadPoolExecutor(max_workers=max(1, parallel)) as pool:
+        list(pool.map(work, jobs))
+    f.close()
+
+    meta = {"timestamp": dt.datetime.now(dt.timezone.utc).isoformat(), "fake": fake, "fake_mode": fake_mode if fake else None,
+            "model": model_name, "judge_model": "fake-oracle" if fake else describe()["judge_model"],
+            "embeddings": "hash" if fake else describe()["embeddings"], "scenario_fingerprint": fingerprint(),
+            "approaches": approaches, "runs_per_cell": runs, "max_steps": max_steps,
+            "scenarios": [s.id for s in scenarios], "note": FAKE_BANNER if fake else ""}
+    (out / "meta.json").write_text(json.dumps(meta, indent=2))
+    return records
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--approaches", nargs="+", default=list(APPROACHES), choices=list(APPROACHES))
+    ap.add_argument("--scenarios", nargs="*", help="scenario ids or prefixes (default: all)")
+    ap.add_argument("--runs", type=int, default=3)
+    ap.add_argument("--out", help="output dir (default results/ or results_fake/)")
+    ap.add_argument("--fake", action="store_true")
+    ap.add_argument("--fake-mode", default="correct", choices=["correct", "wrong", "bad_citation", "loop"])
+    ap.add_argument("--persist-dir", default="chroma_db")
+    ap.add_argument("--no-judge", action="store_true")
+    ap.add_argument("--parallel", type=int, default=2)
+    ap.add_argument("--resume", action="store_true")
+    ap.add_argument("--max-steps", type=int, default=8)
+    a = ap.parse_args()
+    run_all(a.out or ("results_fake" if a.fake else "results"), a.approaches, a.scenarios, a.runs, fake=a.fake,
+            fake_mode=a.fake_mode, persist_dir=a.persist_dir, judge=not a.no_judge, parallel=a.parallel,
+            resume=a.resume, max_steps=a.max_steps)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,23 @@
+# Use Python 3.12 or 3.13. Python 3.14 is too new: chromadb, onnxruntime and torch wheels may be missing.
+# Core (needed for tests and everything else)
+pydantic>=2.7
+pyyaml>=6
+langgraph>=1.0
+langchain-core>=1.0
+langchain-text-splitters>=1.0
+langchain-chroma>=1.0
+chromadb>=1.0
+pytest>=8
+
+# Corpus downloaders
+requests>=2.31
+trafilatura>=1.12      # only for: python ingest/fetch_danluu.py --fetch-pages
+
+# Pick the provider(s) you use
+langchain-openai>=1.0
+langchain-anthropic>=1.0
+langchain-ollama>=1.0     # local models via Ollama
+
+# Real embeddings, option "local" (downloads a model once). Skip if you use EMBEDDINGS=openai.
+langchain-huggingface>=1.0
+sentence-transformers>=3

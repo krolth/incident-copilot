@@ -1,0 +1,6 @@
+{
+  "_note": "Fill in from your provider's pricing page BEFORE the evaluation run, using the exact LLM_MODEL string as the key. USD per million tokens. Cost is reported as 'n/a' for any model not listed. Do not guess prices.",
+  "models": {
+    "REPLACE-WITH-YOUR-LLM_MODEL": {"input_per_mtok": null, "output_per_mtok": null}
+  }
+}
