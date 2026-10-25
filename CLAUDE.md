@@ -31,7 +31,7 @@ Approaches: `fixed` (A, code chooses what to look at), `single` (B, one ReAct ag
 pip install -r requirements.txt
 pytest -q
 python ingest/fetch_icco.py && python ingest/fetch_danluu.py          # corpus (git-ignored)
-python -m triage.knowledge.index                                       # build chroma_db (needs EMBEDDINGS=local|openai)
+python -m triage.knowledge.index                                       # build chroma_db (needs EMBEDDINGS=ollama|local|openai)
 python -m triage.evals.retrieval_eval --k 4
 python -m triage.evals.runner --fake --runs 1                          # plumbing check, writes results_fake/
 python -m triage.evals.runner --scenarios s01 --approaches single --runs 1   # first real smoke test
