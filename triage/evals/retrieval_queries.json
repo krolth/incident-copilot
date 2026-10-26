@@ -1,0 +1,31 @@
+{
+  "_note": "Diagnosis-style knowledge-base queries: what an engineer or agent searches for AFTER forming a hypothesis, each labeled with the runbook it should retrieve. Used to choose chunk size and embedding settings. Drafted by Claude (who also wrote the retrieval code), to be reviewed by the project owner. Frozen once reported: do not edit queries after looking at their results.",
+  "status": "draft, pending owner review",
+  "queries": [
+    {"id": "q01", "runbook": "RB-01", "source": "drafted", "query": "errors started right after the deploy of checkout-svc, only hosts on the new version are affected"},
+    {"id": "q02", "runbook": "RB-01", "source": "drafted", "query": "feature flag push raised the retry count and now the downstream service is overloaded"},
+    {"id": "q03", "runbook": "RB-01", "source": "drafted", "query": "roll back the release that caused a latency regression"},
+    {"id": "q04", "runbook": "RB-01", "source": "smoke trace s01 (single agent)", "query": "bad deploy revert latency matchmaking-svc"},
+    {"id": "q05", "runbook": "RB-02", "source": "drafted", "query": "database connection pool exhausted in several services while client traffic is normal"},
+    {"id": "q06", "runbook": "RB-02", "source": "drafted", "query": "slow query log shows a nightly report query hammering the primary database"},
+    {"id": "q07", "runbook": "RB-02", "source": "drafted", "query": "cache hit rate dropped to zero after a flush and the database is overwhelmed by reads"},
+    {"id": "q08", "runbook": "RB-03", "source": "drafted", "query": "too many open files after the process has been running for days"},
+    {"id": "q09", "runbook": "RB-03", "source": "drafted", "query": "memory climbing steadily for a week until the OOM killer fires, no recent deploy"},
+    {"id": "q10", "runbook": "RB-03", "source": "drafted", "query": "disk slowly filling up, no space left on device"},
+    {"id": "q11", "runbook": "RB-04", "source": "drafted", "query": "request volume five times normal during a product launch, every instance at high CPU"},
+    {"id": "q12", "runbook": "RB-04", "source": "drafted", "query": "autoscaler is at max instances and cannot add more capacity"},
+    {"id": "q13", "runbook": "RB-04", "source": "drafted", "query": "legitimate demand surge from a marketing promotion overwhelming the service"},
+    {"id": "q14", "runbook": "RB-05", "source": "drafted", "query": "errors come from a single host, the rest of the fleet is healthy"},
+    {"id": "q15", "runbook": "RB-05", "source": "drafted", "query": "disk I/O errors and filesystem remounted read-only on one node"},
+    {"id": "q16", "runbook": "RB-05", "source": "drafted", "query": "load balancer health check flapping for one backend target"},
+    {"id": "q17", "runbook": "RB-06", "source": "drafted", "query": "TLS handshake failures, certificate has expired"},
+    {"id": "q18", "runbook": "RB-06", "source": "drafted", "query": "401 token expired errors began at exactly midnight"},
+    {"id": "q19", "runbook": "RB-06", "source": "drafted", "query": "how to renew an expired SSL certificate"},
+    {"id": "q20", "runbook": "RB-07", "source": "drafted", "query": "could not resolve host for the payment provider, SERVFAIL"},
+    {"id": "q21", "runbook": "RB-07", "source": "drafted", "query": "connection resets to a third-party upstream API while internal services look healthy"},
+    {"id": "q22", "runbook": "RB-07", "source": "drafted", "query": "DNS resolver timeouts are failing outbound calls"},
+    {"id": "q23", "runbook": "RB-08", "source": "drafted", "query": "logs are missing for the incident window, cannot determine the cause"},
+    {"id": "q24", "runbook": "RB-08", "source": "drafted", "query": "alert cleared before anyone looked, only a few unexplained errors remain"},
+    {"id": "q25", "runbook": "RB-08", "source": "drafted", "query": "two root causes are still equally plausible, need to escalate to the service owner"}
+  ]
+}

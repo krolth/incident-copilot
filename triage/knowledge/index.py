@@ -30,7 +30,7 @@ class Hit:
     score: float  # distance: lower is closer
 
 
-def chunk_documents(docs: list[Document], chunk_size: int = 900, overlap: int = 120) -> list[Document]:
+def chunk_documents(docs: list[Document], chunk_size: int = 600, overlap: int = 120) -> list[Document]:
     splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=overlap,
                                               separators=["\n\n", "\n", ". ", " ", ""])
     chunks: list[Document] = []
@@ -43,7 +43,7 @@ def chunk_documents(docs: list[Document], chunk_size: int = 900, overlap: int = 
 
 
 def build_index(persist_dir: str = "chroma_db", corpus_dir: str = "corpus", include_corpus: bool = True,
-                chunk_size: int = 900, overlap: int = 120, embeddings_kind: str | None = None) -> "Retriever":
+                chunk_size: int = 600, overlap: int = 120, embeddings_kind: str | None = None) -> "Retriever":
     """Rebuild the index from scratch (so re-runs never duplicate chunks)."""
     path = Path(persist_dir)
     if path.exists():
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     ap.add_argument("--persist-dir", default="chroma_db")
     ap.add_argument("--corpus-dir", default="corpus")
     ap.add_argument("--no-corpus", action="store_true", help="index only the runbooks")
-    ap.add_argument("--chunk-size", type=int, default=900)
+    ap.add_argument("--chunk-size", type=int, default=600)
     ap.add_argument("--overlap", type=int, default=120)
     args = ap.parse_args()
     build_index(args.persist_dir, args.corpus_dir, not args.no_corpus, args.chunk_size, args.overlap)

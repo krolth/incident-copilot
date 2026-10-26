@@ -31,3 +31,19 @@ def test_danluu_loader_skips_duplicates(tmp_path):
     assert len(load_danluu(p)) == 2
     assert [d.metadata["url"] for d in load_danluu(p, skip_urls={"http://x/1"})] == ["http://x/2"]
     assert load_danluu(tmp_path / "missing.jsonl") == []
+
+
+def test_diagnosis_queries_cover_every_runbook():
+    from triage.evals.retrieval_eval import load_diagnosis_queries
+    from triage.schema import RUNBOOK_IDS
+    qs = load_diagnosis_queries()
+    assert len({q["id"] for q in qs}) == len(qs)
+    assert {q["runbook"] for q in qs} == set(RUNBOOK_IDS)
+
+
+def test_diagnosis_eval_scores_labeled_queries(retriever):
+    from triage.evals.retrieval_eval import diagnosis_eval
+    r = diagnosis_eval(retriever, k=3, queries=[
+        {"id": "a", "query": "expired certificate handshake failure", "runbook": "RB-06"},
+        {"id": "b", "query": "expired certificate handshake failure", "runbook": "RB-08"}])
+    assert r["n"] == 2 and r["rows"][0]["rank"] == 1 and r["hit_at_k"] <= 0.5

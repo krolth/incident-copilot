@@ -22,7 +22,7 @@ All three approaches share one data surface and one output schema, so the only v
 - **Knowledge base (RAG):** public postmortems from [icco/postmortems](https://github.com/icco/postmortems) (242 full-text documents with metadata) and [danluu/post-mortems](https://github.com/danluu/post-mortems) (about 240 categorized summaries) act as past incidents. Roughly 8 invented runbooks, covering the six root-cause categories, supply the recommended actions.
 - **Mock tools:** `search_logs`, `get_metrics`, and `get_recent_deploys`, served from per-incident fixtures behind the interface a real Elasticsearch or Grafana client would expose.
 
-**Ingestion and retrieval.** Front matter (company, categories) is kept as chunk metadata. Documents are chunked with overlap, embedded into ChromaDB, and deduplicated across the two sources by URL. Retrieval returns top-k chunks with source ids so every claim can be cited. Chunk size and k are chosen by hit rate on a small labeled set.
+**Ingestion and retrieval.** Front matter (company, categories) is kept as chunk metadata. Documents are chunked with overlap, embedded into ChromaDB, and deduplicated across the two sources by URL. Retrieval returns top-k chunks with source ids so every claim can be cited. Chunk size and k are chosen by hit rate on a small labeled set of diagnosis-style queries (what an agent searches once it suspects a cause), because most alerts describe a symptom that does not name the cause.
 
 **Approaches compared**
 
@@ -70,4 +70,4 @@ Each approach runs all 12 incidents three times, so run-to-run variance is repor
 | Citation validity | Every cited log line, metric, or document exists and supports the claim | Quantitative + judge |
 | Abstention correctness | Says "insufficient evidence" on the 2 unanswerable incidents and not on the others | Quantitative |
 | Tokens, cost (USD), latency, tool calls | Logged per run from the run trace | Quantitative |
-| Retrieval hit rate | Expected runbook appears in the top-k for each answerable incident's alert | Quantitative |
+| Retrieval hit rate | Expected runbook appears in the top-k when searching with each answerable incident's alert (what the fixed pipeline retrieves), and for the labeled diagnosis queries (used to choose chunk size and k) | Quantitative |

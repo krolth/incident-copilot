@@ -3,6 +3,7 @@ __pycache__/
 .env
 corpus/
 chroma_db/
+chroma_*/
 .DS_Store
 results*/
 labels*.csv
