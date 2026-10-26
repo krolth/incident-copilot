@@ -64,7 +64,7 @@ python -m triage.evals.labels agreement labels.csv
 
 ## Sunday plan
 1. Set up `.env`, install, `pytest -q`.
-2. Smoke test one scenario with `single`; read the trace in `results/runs.jsonl`. Tune `prompts.py` on the 2 to 3 dev scenarios only (say which in the log), not on all 18.
+2. Smoke test one scenario with `single`; read the trace in `results/runs.jsonl`. Tune `prompts.py` on the dev scenarios only (`DEV_SCENARIOS` in `triage/scenarios/__init__.py`: s01, s08, s11), not on all 18; the report gives held-out accuracy separately.
 3. Fetch corpus, build index with real embeddings, run `retrieval_eval`; try chunk sizes 600/900/1400 and record the table.
 4. Run the full evaluation (3 repeats), generate the report.
 5. Export ~20 labels, label them by hand BEFORE looking at the judge columns, compute agreement.

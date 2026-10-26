@@ -82,6 +82,18 @@ def build_report(out_dir: str) -> str:
             L.append(f"| {app} | " + " | ".join(cells) + " |")
         L += ["", "Six incidents per tier at most: read these as descriptive, not significant.", ""]
 
+    # dev scenarios: prompts were tuned on them, so their accuracy is optimistic
+    dev_ids = sorted({r["scenario_id"][:3] for r in recs if r.get("dev")})
+    if dev_ids:
+        L += ["## Held out from prompt tuning (category accuracy)", "",
+              f"Prompts were tuned on {', '.join(dev_ids)} only. Held-out is the honest number.", "",
+              "| approach | all | held-out | dev |", "|---|---|---|---|"]
+        for app in sorted(by_app):
+            rs = by_app[app]
+            acc = lambda xs: f"{_fmt(_mean([r['score']['category_correct'] for r in xs]), True)} (n={len(xs)})"
+            L.append(f"| {app} | {acc(rs)} | {acc([r for r in rs if not r.get('dev')])} | {acc([r for r in rs if r.get('dev')])} |")
+        L.append("")
+
     # per-incident matrix
     scs = sorted({r["scenario_id"] for r in recs})
     apps = sorted(by_app)

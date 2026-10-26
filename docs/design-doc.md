@@ -61,13 +61,13 @@ Out of scope: live Elasticsearch, Grafana or chat-ops integrations, and real com
 
 ## Evaluation Criteria
 
-Each approach runs all 18 incidents three times, so run-to-run variance is reported, and results are also broken down by difficulty tier. Judge scores are validated against about 20 of my hand labels and used only if agreement is strong; failed runs are read in full and classified in the README.
+Each approach runs all 18 incidents three times, so run-to-run variance is reported, and results are also broken down by difficulty tier. Prompts are tuned on 3 dev incidents (one per tier) only, and accuracy is also reported on the 15 held-out incidents. Judge scores are validated against about 20 of my hand labels and used only if agreement is strong; failed runs are read in full and classified in the README.
 
 | Metric | How it is measured | Type |
 | --- | --- | --- |
 | Root-cause accuracy | Predicted category and failing component match the ground truth | Quantitative |
 | Action correctness | LLM judge compares the recommended action to the reference runbook step | LLM judge |
 | Citation validity | Every cited log line, metric, or document exists and supports the claim | Quantitative + judge |
-| Abstention correctness | Says "insufficient evidence" on the 2 unanswerable incidents and not on the others | Quantitative |
+| Abstention correctness | Says "insufficient evidence" on the 3 unanswerable incidents and not on the others | Quantitative |
 | Tokens, cost (USD), latency, tool calls | Logged per run from the run trace | Quantitative |
 | Retrieval hit rate | Expected runbook appears in the top-k when searching with each answerable incident's alert (what the fixed pipeline retrieves), and for the labeled diagnosis queries (used to choose chunk size and k) | Quantitative |

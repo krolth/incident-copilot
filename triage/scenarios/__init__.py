@@ -7,6 +7,15 @@ from functools import lru_cache
 
 from triage.scenarios.model import Scenario
 
+# Prompts in triage/prompts.py are tuned on these only (one per tier: s01 medium bad_change, already seen in the
+# first smoke traces; s08 easy infra_failure; s11 hard abstain). Their results are optimistic, so the report also
+# gives accuracy on the other 15. Do not change this list once real results exist.
+DEV_SCENARIOS = ("s01", "s08", "s11")
+
+
+def is_dev(scenario_id: str) -> bool:
+    return scenario_id[:3] in DEV_SCENARIOS
+
 
 @lru_cache(maxsize=1)
 def _built() -> tuple[Scenario, ...]:

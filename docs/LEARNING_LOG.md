@@ -11,6 +11,12 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-26: dev scenarios for prompt tuning
+- **Decision:** tune `prompts.py` on s01 (medium, bad_change), s08 (easy, infra_failure) and s11 (hard, abstain) only.
+- **Why:** one per tier and three different categories. s01 was already read in the first smoke traces, so making it
+  dev keeps that exposure inside the dev set. s11 because abstaining is the behaviour most likely to need prompt work.
+- **Consequence:** every run records `dev`; the report adds held-out accuracy (15 incidents), the number to quote.
+
 ## 2026-10-26: retrieval on the new runbooks; section chunking rejected; system card indexed
 - **Decision:** retrieval queries rewritten (v2, 25 queries, about 3 per runbook) in Fianchetto vocabulary, since v1
   named services that no longer exist. Frozen before any run; owner review pending. v1 numbers are not comparable.

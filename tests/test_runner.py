@@ -18,6 +18,15 @@ def test_fake_runner_end_to_end_and_banners(tmp_path):
     assert {r["difficulty"] for r in recs} == {"medium", "hard"}
 
 
+def test_dev_scenarios_are_flagged_and_reported_separately(tmp_path):
+    out = tmp_path / "fake"
+    recs = run_all(str(out), ["fixed"], ["s01", "s13"], 1, fake=True, parallel=1)
+    assert {r["scenario_id"][:3]: r["dev"] for r in recs} == {"s01": True, "s13": False}
+    report = build_report(str(out))
+    assert "## Held out from prompt tuning" in report and "tuned on s01 only" in report
+    assert "| fixed | 100% (n=2) | 100% (n=1) | 100% (n=1) |" in report
+
+
 def test_resume_skips_finished_runs(tmp_path):
     out = str(tmp_path / "r")
     run_all(out, ["fixed"], ["s01"], 1, fake=True)

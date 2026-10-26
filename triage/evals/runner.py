@@ -24,7 +24,7 @@ from triage.approaches.common import BACKOFF_BASE_S, BACKOFF_CAP_S, MAX_RETRIES,
 from triage.env import Trace
 from triage.evals.judge import judge_run
 from triage.evals.scoring import load_pricing, score_run
-from triage.scenarios import all_scenarios, fingerprint
+from triage.scenarios import all_scenarios, fingerprint, is_dev
 from triage.testing.fake_llm import FAKE_BANNER, oracle_llm
 
 
@@ -90,6 +90,7 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
             rec["judge_trace"] = jtrace.events
         rec["fake"] = fake
         rec["difficulty"] = sc.difficulty
+        rec["dev"] = is_dev(sc.id)  # prompts were tuned on it
         with lock:
             records.append(rec)
             f.write(json.dumps(rec) + "\n")
