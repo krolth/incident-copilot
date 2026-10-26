@@ -18,7 +18,7 @@ Approaches: `fixed` (A, code chooses what to look at), `single` (B, one ReAct ag
 - `triage/schema.py` typed results; `triage/prompts.py` all prompts
 - `triage/scenarios/` 18 deterministic incidents on the Fianchetto system (`defs.py`; plan in `docs/scenario-plan.md`, system in `docs/system.md`), engine (`model.py`). Ground truth lives here.
 - `triage/env.py` the 4 tools over a scenario; records `seen_ids` and `evidence`
-- `triage/knowledge/` runbooks (invented, RB-01..08), loader (icco + danluu corpus), Chroma index, embeddings
+- `triage/knowledge/` runbooks (invented, RB-01..08), loader (runbooks + system card + icco/danluu corpus; never `docs/scenario-plan.md`), Chroma index, embeddings
 - `triage/approaches/` `fixed.py`, `single_agent.py`, `multi_agent.py`, `react.py` (LangGraph loop, step cap), `common.py`
 - `triage/llm.py` provider switch via env vars; `.env.example` lists them
 - `triage/evals/` `scoring.py` (deterministic), `judge.py` (LLM judge), `labels.py` (human labels + kappa), `retrieval_eval.py`, `runner.py`, `report.py`

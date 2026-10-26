@@ -6,7 +6,7 @@ Oct 24, 2026 · @Sharad Cornejo Altuzar
 
 Given one automated alert from a simulated live-service platform, the system names the root cause, recommends the matching runbook action, and says "insufficient evidence" when the data cannot support a conclusion, all before a human is paged.
 
-- **Input:** one alert (for example, "matchmaking-svc p99 latency above 2s") plus tool access to mock logs, metrics, deploy history, and a knowledge base of runbooks and past incidents.
+- **Input:** one alert (for example, "matchmaking p99 latency above 2s") plus tool access to mock logs, metrics, deploy history, and a knowledge base of runbooks and past incidents.
 - **Output:** a structured result with the root-cause category and failing component, cited evidence, a recommended action, and an "insufficient evidence" option.
 - **Root-cause categories (6):** bad deploy or config change; dependency saturation or retry storm; resource leak; traffic spike beyond capacity; node or infrastructure failure; expired certificate or credential.
 - **Scenarios:** 18 hand-built incidents with known root causes, all on one fictional system (an online chess platform, `docs/system.md`): 15 answerable and 3 where the correct answer is "insufficient evidence". They come in three difficulty tiers of 6: easy (the obvious read is right), medium (one natural coincidence, such as an unrelated deploy) and hard (real misdirection, or the right answer is to abstain). Ground truth is the mitigation to apply now. All scenario data is synthetic and labeled as such.
@@ -19,7 +19,7 @@ All three approaches share one data surface and one output schema, so the only v
 
 **Data surface**
 
-- **Knowledge base (RAG):** public postmortems from [icco/postmortems](https://github.com/icco/postmortems) (242 full-text documents with metadata) and [danluu/post-mortems](https://github.com/danluu/post-mortems) (about 240 categorized summaries) act as past incidents. Roughly 8 invented runbooks, covering the six root-cause categories, supply the recommended actions.
+- **Knowledge base (RAG):** public postmortems from [icco/postmortems](https://github.com/icco/postmortems) (242 full-text documents with metadata) and [danluu/post-mortems](https://github.com/danluu/post-mortems) (about 240 categorized summaries) act as past incidents. 8 invented runbooks, covering the seven root-cause categories (infra failure has two: a bad node, and DNS, network or provider), supply the recommended actions, and the platform's system card (`docs/system.md`: services, dependencies, what is stateful) is indexed with them. The scenario answer key is never indexed.
 - **Mock tools:** `search_logs`, `get_metrics`, and `get_recent_deploys`, served from per-incident fixtures behind the interface a real Elasticsearch or Grafana client would expose.
 
 **Ingestion and retrieval.** Front matter (company, categories) is kept as chunk metadata. Documents are chunked with overlap, embedded into ChromaDB, and deduplicated across the two sources by URL. Retrieval returns top-k chunks with source ids so every claim can be cited. Chunk size and k are chosen by hit rate on a small labeled set of diagnosis-style queries (what an agent searches once it suspects a cause), because most alerts describe a symptom that does not name the cause.

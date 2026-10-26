@@ -216,6 +216,6 @@ class Environment:
             "search_knowledge": StructuredTool.from_function(
                 func=lambda query, k=4: self.search_knowledge(query, k, agent),
                 name="search_knowledge", args_schema=SearchKnowledgeArgs,
-                description="Search runbooks and past incident postmortems. Returns passages with ids like [K:RB-01#0]."),
+                description="Search runbooks, the platform system card (services, dependencies, what is stateful), and past incident postmortems. Returns passages with ids like [K:RB-01#0]."),
         }
         return [defs[n] for n in names]

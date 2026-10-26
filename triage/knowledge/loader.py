@@ -1,7 +1,8 @@
 """Load the knowledge base: invented runbooks plus public postmortems.
 
-Sources, all optional except the runbooks:
+Sources, all optional except the runbooks and the system card:
   triage/knowledge/runbooks/*.md      invented runbooks (shipped with the repo)
+  docs/system.md                      system card of the fictional platform (sections 1-12 only)
   corpus/icco/*.md                    icco/postmortems: YAML front matter + cleaned full text
   corpus/danluu/entries.jsonl         danluu/post-mortems: one short summary + link per postmortem
 
@@ -19,6 +20,8 @@ import yaml
 from langchain_core.documents import Document
 
 RUNBOOK_DIR = Path(__file__).parent / "runbooks"
+SYSTEM_CARD = Path(__file__).resolve().parents[2] / "docs" / "system.md"
+# docs/scenario-plan.md is the answer key and must never be loaded here.
 _FRONT = re.compile(r"\A---\s*\n(.*?)\n---\s*\n(.*)\Z", re.S)
 
 
@@ -42,6 +45,19 @@ def load_runbooks(directory: Path = RUNBOOK_DIR) -> list[Document]:
                              metadata={"doc_id": doc_id, "title": str(meta.get("title", doc_id)),
                                        "kind": "runbook", "source": str(path.name), "url": ""}))
     return docs
+
+
+def load_system_card(path: Path = SYSTEM_CARD) -> list[Document]:
+    """What an on-call engineer would know about the platform. Keeps sections 1-12: drops the draft-status
+    preamble and section 13 (design decisions taken with the owner), and the mermaid diagram (the prose says
+    the same, and diagram syntax embeds poorly)."""
+    text = Path(path).read_text(encoding="utf-8")
+    body = text[text.index("\n## 1."):]
+    body = body[:body.index("\n## 13.")] if "\n## 13." in body else body
+    body = re.sub(r"```mermaid.*?```\n?", "", body, flags=re.S).strip()
+    return [Document(page_content=f"Fianchetto system card\n\n{body}",
+                     metadata={"doc_id": "SYS", "title": "Fianchetto system card", "kind": "system",
+                               "source": "docs/system.md", "url": ""})]
 
 
 def load_icco(directory: Path) -> list[Document]:
@@ -83,7 +99,7 @@ def load_danluu(entries_path: Path, skip_urls: set[str] | None = None) -> list[D
 
 
 def load_knowledge(corpus_dir: str | Path = "corpus", include_corpus: bool = True) -> list[Document]:
-    docs = load_runbooks()
+    docs = load_runbooks() + load_system_card()
     if include_corpus:
         corpus = Path(corpus_dir)
         icco = load_icco(corpus / "icco") if (corpus / "icco").exists() else []

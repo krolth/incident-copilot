@@ -1,5 +1,5 @@
 from triage.knowledge.index import chunk_documents
-from triage.knowledge.loader import load_danluu, load_icco, load_runbooks
+from triage.knowledge.loader import load_danluu, load_icco, load_knowledge, load_runbooks, load_system_card
 
 
 def test_runbooks_load():
@@ -47,3 +47,16 @@ def test_diagnosis_eval_scores_labeled_queries(retriever):
         {"id": "a", "query": "expired certificate handshake failure", "runbook": "RB-06"},
         {"id": "b", "query": "expired certificate handshake failure", "runbook": "RB-08"}])
     assert r["n"] == 2 and r["rows"][0]["rank"] == 1 and r["hit_at_k"] <= 0.5
+
+
+def test_system_card_indexed_without_meta_sections():
+    [card] = load_system_card()
+    text = card.page_content
+    assert card.metadata["kind"] == "system" and "## 1. Product" in text and "## 12." in text
+    assert "## 13." not in text and "```" not in text and "Status:" not in text
+    assert "SYS" in {d.metadata["doc_id"] for d in load_knowledge(include_corpus=False)}
+
+
+def test_answer_key_never_indexed():
+    texts = " ".join(d.page_content for d in load_knowledge(include_corpus=False))
+    assert "Distractor or trap" not in texts and "scenario-plan" not in texts

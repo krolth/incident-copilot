@@ -24,7 +24,7 @@ class Hit:
     chunk_id: str  # e.g. "K:RB-01#0" (what agents cite)
     doc_id: str
     title: str
-    kind: str  # runbook | postmortem
+    kind: str  # runbook | system | postmortem
     source: str
     text: str
     score: float  # distance: lower is closer

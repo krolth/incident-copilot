@@ -11,6 +11,30 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-26: retrieval on the new runbooks; section chunking rejected; system card indexed
+- **Decision:** retrieval queries rewritten (v2, 25 queries, about 3 per runbook) in Fianchetto vocabulary, since v1
+  named services that no longer exist. Frozen before any run; owner review pending. v1 numbers are not comparable.
+- **Hypothesis:** chunking runbooks by `##` section (one idea per chunk) would beat fixed 600-char chunks.
+- **Evidence** (nomic-embed-text, postmortems at 600/120 in every row, k=4; scratch ablation, not agent eval data):
+
+  | runbook chunking, system card | diagnosis hit@1 / hit@4 / MRR (n=25) | alert symptom hit@4 (n=15) | full alert hit@4 / MRR (n=15) |
+  |---|---|---|---|
+  | fixed 600, no card | 0.60 / 0.84 / 0.727 | 0.40 | 0.533 / 0.432 |
+  | by section, no card | 0.60 / 0.76 / 0.686 | 0.333 | not run |
+  | by section, card | 0.60 / 0.76 / 0.686 | 0.333 | not run |
+  | **fixed 600, card (chosen)** | 0.52 / 0.84 / 0.670 | 0.40 | 0.467 / 0.405 |
+
+- **Surprise / failure:** sections were worse, not better: four queries dropped out of the top 4. Several sections of
+  one runbook fill the top-k slots (q02's top 4 was RB-01 three times), and short sections ("When to use", "Do not")
+  carry little to match. Two queries in 25 is not significant, but nothing supports the extra code, so it was removed.
+- **Decision:** index the system card (sections 1-12, no status preamble, no decisions section, no diagram) with
+  fixed chunks. hit@4 is unchanged; it costs rank-1 hits (0.60 to 0.52) and one full-alert hit, and appears in 12 of
+  25 top-4 lists. Kept because the agent reads all 4 passages, and the card holds what the mitigation depends on (what
+  is stateful, that `cfgpush` changes are not in deploy history). A test checks the answer key is never loaded.
+- **Misses (chosen index):** q01 (deploy, new-version pods only: RB-05 node runbook wins), q04 (migration: postmortems
+  win), q23 (logs missing), q25 (two causes): RB-08's language is generic and real postmortems outrank it.
+- **Next:** owner reviews the v2 queries; revisit only if hand-read traces show the agent missing runbooks.
+
 ## 2026-10-26: 18 scenarios rewritten on Fianchetto
 - **Decision:** `defs.py` rewritten to the plan: 6 easy, 6 medium, 6 hard; 15 answerable, 3 abstain. Each scenario
   carries a `difficulty` field; the report adds a by-tier table (descriptive only, n=6 per tier).

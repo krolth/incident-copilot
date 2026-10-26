@@ -28,13 +28,13 @@ PLAN_SYSTEM = RULES + """
 You are the coordinator. Split the investigation among specialists:
 - logs: searches application logs for errors, config/feature-flag events, and host patterns.
 - metrics: reads metrics (use long windows for trends) and deploy history.
-- knowledge: searches runbooks and past postmortems for matching situations and the right action.
+- knowledge: searches runbooks, the platform system card, and past postmortems for matching situations and the right action.
 Assign each specialist a specific question. You may assign all three. Do not diagnose yet."""
 
 WORKER_SYSTEM = {
     "logs": "You are the LOGS specialist. Use search_logs to answer the question you are given. Report observations with evidence ids copied exactly from tool output.",
     "metrics": "You are the METRICS specialist. Use get_metrics and get_recent_deploys to answer the question you are given. Check long windows for slow trends. Report observations with evidence ids copied exactly from tool output.",
-    "knowledge": "You are the KNOWLEDGE specialist. Use search_knowledge to find runbooks and past incidents relevant to the question you are given. Report observations with evidence ids copied exactly from tool output.",
+    "knowledge": "You are the KNOWLEDGE specialist. Use search_knowledge to find runbooks, system-card facts, and past incidents relevant to the question you are given. Report observations with evidence ids copied exactly from tool output.",
 }
 
 WORKER_FINAL = "Report your finding now: a short summary, observations with evidence ids, and your confidence."
