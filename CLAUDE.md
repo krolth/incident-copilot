@@ -25,6 +25,7 @@ Approaches: `fixed` (A, code chooses what to look at), `single` (B, one ReAct ag
 - `triage/testing/fake_llm.py` scripted fake model for offline tests
 - `ingest/` corpus downloaders (output goes to git-ignored `corpus/`)
 - `tests/` pytest; must stay green
+- `docs/run-log.md` one entry per real-model batch (what changed, settings, results, runtime, traces read); add one after every batch
 
 ## Commands
 ```

@@ -15,6 +15,12 @@ from triage.scenarios.model import Scenario
 from triage.schema import TriageResult
 
 
+# Model steps for the single agent's ReAct loop (multi-agent workers have their own `worker_steps`, default 5).
+# 8 cut off half the single-agent dev runs mid-investigation (2026-10-26); every cap hit is recorded and reported.
+MAX_STEPS = 12
+WORKER_STEPS = 5  # per multi-agent worker ReAct loop
+
+
 class UsageTracker(BaseCallbackHandler):
     """Sums token usage and counts model calls across every LLM call in a run (thread-safe)."""
 
@@ -119,7 +125,7 @@ class RunRecord:
 
 def execute(fn, approach: str, scenario: Scenario, llm, retriever, run_idx: int = 0, cfg: dict | None = None) -> RunRecord:
     """Run one approach on one scenario and capture everything needed to score and audit it."""
-    cfg = {"max_steps": 8, **(cfg or {})}
+    cfg = {"max_steps": MAX_STEPS, **(cfg or {})}
     trace = Trace()
     tracker = UsageTracker(trace)
     env = Environment(scenario, retriever, trace)

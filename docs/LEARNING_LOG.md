@@ -11,6 +11,26 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-26: first dev tuning round (details per batch in `docs/run-log.md`)
+- **Surprise / failure:** the s11 log gap was invisible: `search_logs` showed 20 lines and hid the rest, so no
+  agent could have seen it. **Decision:** add a count histogram to `search_logs` (like the bar chart above Kibana
+  hits), starting at log retention so the start of generated data doesn't read as a gap. A tool fix, not a
+  scenario change; no real results existed yet.
+- **Surprise:** even with the histogram, 0 of 18 s11 runs noticed the gap: agents always filter by ERROR or a
+  keyword, and in those views the gap's end looks like an error onset. Left as it is: that cross-check (metric
+  elevated before the first ERROR line) is what a hard scenario should test.
+- **Decision:** single-agent step cap 8 → 12; it cut off half the single-agent runs mid-investigation. Every cap
+  hit is now recorded (`step_cap_hits`). Even at 12 it binds in 3 of 9 runs.
+- **Evidence (prompt A/B, dev only, n=27 per arm):** four new prompt rules gave 21/27 correct vs 20/27 without them;
+  no measurable effect. The instruction to search the knowledge base moved the single agent from 0/9 to 1/9 runs.
+  Kept anyway: they are correct general rules and cost nothing, and invalid citations fell (single 97% vs 89%).
+- **Finding to write up:** the single agent almost never uses RAG; it picks the runbook from the list in the prompt.
+  Not forced in code, since that would change what approach B is.
+- **Mistake (mine, Claude's):** I first said multi-agent workers got the same 8 steps as the single agent; they have
+  their own cap of 5 (`worker_steps`), which binds in every multi run. Owner decision pending.
+- **Decision:** batches now record start/end, wall-clock, judge latency per run, git commit and a prompts hash.
+  The first dev batches lacked these; their run-log times are reconstructed from file timestamps and say so.
+
 ## 2026-10-26: dev scenarios for prompt tuning
 - **Decision:** tune `prompts.py` on s01 (medium, bad_change), s08 (easy, infra_failure) and s11 (hard, abstain) only.
 - **Why:** one per tier and three different categories. s01 was already read in the first smoke traces, so making it

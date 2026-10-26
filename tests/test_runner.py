@@ -27,6 +27,17 @@ def test_dev_scenarios_are_flagged_and_reported_separately(tmp_path):
     assert "| fixed | 100% (n=2) | 100% (n=1) | 100% (n=1) |" in report
 
 
+def test_batch_records_runtime_and_code_version(tmp_path):
+    out = tmp_path / "fake"
+    recs = run_all(str(out), ["fixed"], ["s13"], 1, fake=True, parallel=1, worker_steps=7)
+    meta = json.loads((out / "meta.json").read_text())
+    assert meta["wall_clock_s"] >= 0 and meta["started_at"] <= meta["finished_at"]
+    assert len(meta["prompts_sha256"]) == 12 and meta["worker_steps"] == 7 and "git_commit" in meta
+    assert recs[0]["judge_latency_s"] >= 0
+    report = build_report(str(out))
+    assert "wall-clock:" in report and "judge time" in report and "worker 7" in report
+
+
 def test_resume_skips_finished_runs(tmp_path):
     out = str(tmp_path / "r")
     run_all(out, ["fixed"], ["s01"], 1, fake=True)

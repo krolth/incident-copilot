@@ -24,6 +24,9 @@ from triage.scenarios.model import LEVELS, WINDOW_MINUTES, Scenario
 
 ID_RE = re.compile(r"\[((?:L\d{4})|(?:D\d+)|(?:M:[^\]\s]+)|(?:K:[^\]\s]+))\]")
 MAX_LOG_LINES = 20
+# Bucket width per window for the search_logs count histogram (like Kibana's bar chart above the hits): with
+# only 20 lines shown, a gap or an onset in the middle of the window is otherwise invisible.
+HISTOGRAM_BUCKET_MIN = {15: 1, 60: 5, 360: 30, 1440: 120, 10080: 720}
 MAX_CHARS = 6000
 TOOL_NAMES = ("search_logs", "get_metrics", "get_recent_deploys", "search_knowledge")
 
@@ -132,6 +135,16 @@ class Environment:
                   + " ".join(f"{k}={v}" for k, v in sorted(by_level.items()))
                   + ("; top hosts: " + ", ".join(f"{h}({n})" for h, n in by_host) if by_host else "")
                   + f"; newest match: {sc.abs_time(newest)} ({round((now_s - newest) / 60, 1)} min before now)")
+        bucket_s = HISTOGRAM_BUCKET_MIN.get(minutes, max(1, minutes // 12)) * 60
+        counts = Counter(int((l.t - start_s) // bucket_s) for l in hits)
+        n_buckets = -(-minutes * 60 // bucket_s)
+        # Scenarios only generate recent logs; empty buckets before the oldest retained line would read as a
+        # telemetry gap, so the histogram starts at retention, like a real log store.
+        retained_s = min(l.t for l in sc.logs)
+        first = max(0, int((retained_s - start_s) // bucket_s))
+        retention = f" (log retention starts {sc.abs_time(retained_s)})" if first else ""
+        header += (f"\nmatches per {bucket_s // 60} min from {sc.abs_time(start_s + first * bucket_s)}{retention}, oldest first: "
+                   + " ".join(str(counts.get(i, 0)) for i in range(first, n_buckets)))
         shown = hits if len(hits) <= MAX_LOG_LINES else hits[:6] + hits[-(MAX_LOG_LINES - 6):]
         lines = []
         for i, l in enumerate(shown):

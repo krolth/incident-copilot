@@ -35,11 +35,16 @@ def build_report(out_dir: str) -> str:
         L += ["> **FAKE MODEL RUN: NOT EVALUATION DATA.** Produced by a scripted oracle to test the plumbing.", ""]
     L += [f"# Results: {out_dir}", "",
           f"- model: `{meta.get('model')}`  judge: `{meta.get('judge_model')}`  embeddings: `{meta.get('embeddings')}`",
-          f"- scenario fingerprint: `{meta.get('scenario_fingerprint')}`  runs per cell: {meta.get('runs_per_cell')}  timestamp: {meta.get('timestamp')}", ""]
+          f"- scenario fingerprint: `{meta.get('scenario_fingerprint')}`  runs per cell: {meta.get('runs_per_cell')}  timestamp: {meta.get('timestamp')}",
+          f"- code: `{meta.get('git_commit', 'n/a')}`{' (uncommitted changes)' if meta.get('git_dirty') else ''}  prompts: `{meta.get('prompts_sha256', 'n/a')}`  "
+          f"step caps: single {meta.get('max_steps', 'n/a')}, worker {meta.get('worker_steps', 'n/a')}",
+          f"- wall-clock: {_fmt(meta['wall_clock_s'] / 60, nd=1) + ' min' if meta.get('wall_clock_s') is not None else 'not recorded'}  "
+          f"agent time {sum(r.get('latency_s', 0) for r in recs) / 60:.1f} min, judge time "
+          + (f"{sum(r.get('judge_latency_s') or 0 for r in recs) / 60:.1f} min" if any('judge_latency_s' in r for r in recs) else "not recorded"), ""]
 
     L += ["## By approach", "",
-          "| approach | runs | valid | category acc | abstention ok | runbook acc | judge action (0-2) | judge evidence (0-2) | citation valid | key evidence cited | tool calls | LLM calls | retries/run | tokens in/out | cost/run | latency s |",
-          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+          "| approach | runs | valid | category acc | abstention ok | runbook acc | judge action (0-2) | judge evidence (0-2) | citation valid | key evidence cited | tool calls | LLM calls | retries/run | step-cap hits/run | tokens in/out | cost/run | latency s |",
+          "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for app in sorted(by_app):
         rs = by_app[app]
         s = [r["score"] for r in rs]
@@ -50,11 +55,12 @@ def build_report(out_dir: str) -> str:
             _fmt(_mean([x["action_alignment"] for x in j])), _fmt(_mean([x["evidence_support"] for x in j])),
             _fmt(_mean([x["citation_valid_rate"] for x in s]), True), _fmt(_mean([x["key_cited"] for x in s]), True),
             _fmt(_mean([x["tool_calls"] for x in s]), nd=1), _fmt(_mean([x["llm_calls"] for x in s]), nd=1),
-            _fmt(_mean([x.get("retries", 0) for x in s]), nd=2),
+            _fmt(_mean([x.get("retries", 0) for x in s]), nd=2), _fmt(_mean([x.get("step_cap_hits", 0) for x in s]), nd=2),
             f"{_mean([x['input_tokens'] for x in s]):.0f}/{_mean([x['output_tokens'] for x in s]):.0f}",
             ("$" + _fmt(_mean([x["cost_usd"] for x in s]), nd=4)) if _mean([x["cost_usd"] for x in s]) is not None else "n/a",
             _fmt(_mean([x["latency_s"] for x in s]), nd=1)]) + " |")
     L += ["", "retries/run: model calls re-tried after an error (empty or invalid reply, server error); see `with_retries`.",
+          "step-cap hits/run: ReAct loops (single agent, multi-agent workers) cut off at the step cap with a tool call pending.",
           "Judge columns are only meaningful once judge/human agreement has been measured (`python -m triage.evals.labels agreement`).", ""]
 
     # variance across repeats: accuracy of each repeat index, then spread

@@ -10,7 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from triage.approaches.common import UsageTracker, structured_call
+from triage.approaches.common import WORKER_STEPS, UsageTracker, structured_call
 from triage.approaches.react import run_react
 from triage.env import Environment
 from triage.prompts import FINALIZE_PROMPT, PLAN_SYSTEM, SYNTH_SYSTEM, WORKER_FINAL, WORKER_SYSTEM
@@ -48,7 +48,7 @@ def _format_findings(findings: list[Finding]) -> str:
 
 
 def run(alert: Alert, env: Environment, llm, tracker: UsageTracker, cfg: dict) -> TriageResult:
-    max_steps = cfg.get("worker_steps", 5)
+    max_steps = cfg.get("worker_steps", WORKER_STEPS)
     plan = structured_call(llm, Plan, [SystemMessage(content=PLAN_SYSTEM), HumanMessage(content=alert.as_text())], tracker)
     if not plan.assignments:  # a model that plans nothing gets the default plan rather than a failed run
         plan = Plan(assignments=[WorkerAssignment(worker=w, question=alert.symptom) for w in WORKER_TOOLS])

@@ -30,6 +30,7 @@ def test_step_cap_stops_a_looping_agent(retriever):
     rec = execute(APPROACHES["single"], "single", sc, oracle_llm(sc, "loop"), retriever, cfg={"max_steps": 3})
     assert rec.error is None and rec.result is not None
     assert len(rec.calls) <= 3 * 2
+    assert [e for e in rec.trace if e["type"] == "step_cap"]  # recorded, so the report can count it
 
 
 def test_failure_is_recorded_not_raised(retriever):

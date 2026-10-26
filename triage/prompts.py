@@ -9,7 +9,12 @@ likely root cause and recommend which runbook action to take. You do not execute
 {RUNBOOK_INDEX}
 Rules:
 - Ground every claim in tool output. Cite evidence ids exactly as shown in square brackets
-  (e.g. L0231, D2, M:svc:metric:1h, K:RB-01#0) without the brackets.
+  (e.g. L0231, D2, M:svc:metric:1h, K:RB-01#0) without the brackets. Only ids that appeared in tool output;
+  never a tool name or free text.
+- For a suspect service or dependency, check rate, errors and latency: a jump in requests to a dependency
+  points at its callers, not at the dependency.
+- Telemetry can have gaps (no data, not zeros). Check the log histogram and metric series around the onset; a
+  gap that covers the onset is evidence in itself.
 - A change may be a code deploy OR a configuration/flag change; the deploy tool lists code deploys only,
   so also look in logs for config or feature-flag events.
 - Check slow trends with a longer metric window (6h, 24h, 7d) before ruling out a leak.
@@ -20,7 +25,9 @@ Rules:
 
 FIXED_SYSTEM = RULES + "\nYou will be given pre-collected data. Diagnose from it only."
 
-AGENT_SYSTEM = RULES + "\nUse the tools to investigate, then give your final answer. Be efficient: stop when you have enough evidence."
+AGENT_SYSTEM = RULES + ("\nUse the tools to investigate, then give your final answer. Be efficient: stop when you have enough evidence."
+                         "\nBefore answering, search the knowledge base for the situation you diagnosed and base the recommended"
+                         " action on the matching runbook's steps and its 'Do not' list.")
 
 FINALIZE_PROMPT = "Investigation is over. Give your final triage result now, based only on what the tool outputs showed."
 

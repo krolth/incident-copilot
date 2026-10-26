@@ -53,3 +53,13 @@ def test_tools_have_agent_label_baked_in():
     t = {x.name: x for x in e.tools(agent="logs")}
     t["search_logs"].invoke({"service": "matchmaking", "level": "ERROR"})
     assert e.calls[-1]["agent"] == "logs"
+
+
+def test_search_logs_histogram_shows_gaps_and_starts_at_retention():
+    from triage.scenarios import get_scenario
+    e = Environment(get_scenario("s11"), retriever=None)
+    hist = e.search_logs("stats", "", "", "1h").split("\n")[1]
+    assert hist.startswith("matches per 5 min from ") and len(hist.split(": ")[1].split()) == 12
+    week = e.search_logs("", "", "", "7d").split("\n")[1]
+    # buckets before the oldest generated line are not shown as zeros (they would look like a gap)
+    assert "log retention starts" in week and " 0" not in week.split(": ")[1]

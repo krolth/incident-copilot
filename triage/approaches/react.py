@@ -13,7 +13,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
 
-from triage.approaches.common import UsageTracker, structured_call, with_retries
+from triage.approaches.common import MAX_STEPS, UsageTracker, structured_call, with_retries
 from triage.prompts import FINALIZE_PROMPT
 
 
@@ -38,6 +38,8 @@ def build_graph(llm, tools, max_steps: int, tracker: UsageTracker):
 
     def cap(state: ReactState) -> dict:
         last = state["messages"][-1]
+        if tracker.trace:  # the investigation was cut short: scored and reported as step_cap_hits
+            tracker.trace.add(type="step_cap", pending=[tc["name"] for tc in last.tool_calls])
         return {"messages": [ToolMessage(content="Step limit reached; this tool call was not run.", tool_call_id=tc["id"])
                              for tc in last.tool_calls]}
 
@@ -52,7 +54,7 @@ def build_graph(llm, tools, max_steps: int, tracker: UsageTracker):
     return g.compile()
 
 
-def run_react(llm, system: str, user: str, tools, schema, tracker: UsageTracker, max_steps: int = 8,
+def run_react(llm, system: str, user: str, tools, schema, tracker: UsageTracker, max_steps: int = MAX_STEPS,
               final_prompt: str = FINALIZE_PROMPT):
     """Investigate with tools, then return (typed answer, message history, model steps used)."""
     graph = build_graph(llm, tools, max_steps, tracker)
