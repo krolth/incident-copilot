@@ -67,6 +67,21 @@ def build_report(out_dir: str) -> str:
         L.append(f"| {app} | {', '.join(f'{a * 100:.0f}%' for a in accs)} | {(st.pstdev(accs) * 100 if len(accs) > 1 else 0):.1f} pts |")
     L.append("")
 
+    # by difficulty tier: does an approach only pay off on hard incidents?
+    tiers = [t for t in ("easy", "medium", "hard") if any(r.get("difficulty") == t for r in recs)]
+    if tiers:
+        L += ["## By difficulty (category accuracy, runs, mean cost/run)", "",
+              "| approach | " + " | ".join(tiers) + " |", "|---|" + "---|" * len(tiers)]
+        for app in sorted(by_app):
+            cells = []
+            for t in tiers:
+                rs = [r for r in by_app[app] if r.get("difficulty") == t]
+                cost = _mean([r["score"]["cost_usd"] for r in rs])
+                cells.append(f"{_fmt(_mean([r['score']['category_correct'] for r in rs]), True)} (n={len(rs)}, "
+                             + (f"${cost:.4f})" if cost is not None else "cost n/a)"))
+            L.append(f"| {app} | " + " | ".join(cells) + " |")
+        L += ["", "Six incidents per tier at most: read these as descriptive, not significant.", ""]
+
     # per-incident matrix
     scs = sorted({r["scenario_id"] for r in recs})
     apps = sorted(by_app)

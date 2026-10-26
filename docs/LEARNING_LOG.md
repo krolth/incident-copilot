@@ -11,6 +11,15 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-26: 18 scenarios rewritten on Fianchetto
+- **Decision:** `defs.py` rewritten to the plan: 6 easy, 6 medium, 6 hard; 15 answerable, 3 abstain. Each scenario
+  carries a `difficulty` field; the report adds a by-tier table (descriptive only, n=6 per tier).
+- **Owner review:** s18 (config push and NIC flap in the same minute) confirmed as a fair abstain case, not just
+  ambiguous; s05's node-to-pod mapping via kubelet log lines confirmed realistic. s07's matchmaking logs say only
+  "no opponent found" (the first draft named the band width and gave the answer away).
+- **Evidence:** fake-model plumbing check 54/54 (not eval data); every key log and key metric is reachable by tools.
+- **Caveat:** runbooks hint at some scenarios (s03, s05, s17); covered by the upper-bound note.
+
 ## 2026-10-25: a concrete system to ground everything (Fianchetto)
 - **Surprise / failure:** the starter runbooks and scenarios were generic: about 25 service names across 12
   scenarios, each scenario its own little world, nothing saying what is stateful. "Revert the deploy" reads the same

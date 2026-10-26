@@ -20,6 +20,8 @@ from triage.schema import Alert, Category
 
 WINDOW_MINUTES = {"15m": 15, "1h": 60, "6h": 360, "24h": 1440, "7d": 10080}
 LEVELS = ("DEBUG", "INFO", "WARN", "ERROR")
+# easy: the obvious read is right; medium: one natural coincidence; hard: real misdirection or must abstain.
+DIFFICULTIES = ("easy", "medium", "hard")
 
 
 # ---- metrics ---------------------------------------------------------------------------------
@@ -169,7 +171,11 @@ class Scenario:
     metrics: dict[str, dict[str, Metric]]
     logs: list[LogLine]
     deploys: list[Deploy]
+    difficulty: str  # one of DIFFICULTIES; results are also reported per tier
     now_min: int = 5  # data is visible up to this many minutes after the alert
+
+    def __post_init__(self) -> None:
+        assert self.difficulty in DIFFICULTIES, self.difficulty
 
     def abs_time(self, t_s: float) -> str:
         base = dt.datetime.fromisoformat(self.alert.fired_at.replace("Z", "+00:00"))
@@ -180,7 +186,7 @@ class Scenario:
         sample = [round(m.value(t), 3) for svc in sorted(self.metrics) for name in sorted(self.metrics[svc])
                   for m in [self.metrics[svc][name]] for t in range(-120, self.now_min + 1, 15)]
         return {
-            "id": self.id, "alert": self.alert.model_dump(), "now_min": self.now_min,
+            "id": self.id, "alert": self.alert.model_dump(), "now_min": self.now_min, "difficulty": self.difficulty,
             "truth": {"category": self.truth.category.value, "aliases": self.truth.component_aliases,
                       "runbook": self.truth.runbook, "answerable": self.truth.answerable},
             "logs": [(l.t, l.service, l.level, l.message, l.host, l.key) for l in self.logs],

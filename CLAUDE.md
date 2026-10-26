@@ -16,7 +16,7 @@ Approaches: `fixed` (A, code chooses what to look at), `single` (B, one ReAct ag
 
 ## Layout
 - `triage/schema.py` typed results; `triage/prompts.py` all prompts
-- `triage/scenarios/` 12 deterministic incidents (`defs.py`), engine (`model.py`). Ground truth lives here.
+- `triage/scenarios/` 18 deterministic incidents on the Fianchetto system (`defs.py`; plan in `docs/scenario-plan.md`, system in `docs/system.md`), engine (`model.py`). Ground truth lives here.
 - `triage/env.py` the 4 tools over a scenario; records `seen_ids` and `evidence`
 - `triage/knowledge/` runbooks (invented, RB-01..08), loader (icco + danluu corpus), Chroma index, embeddings
 - `triage/approaches/` `fixed.py`, `single_agent.py`, `multi_agent.py`, `react.py` (LangGraph loop, step cap), `common.py`
@@ -51,9 +51,9 @@ python -m triage.evals.labels agreement labels.csv
 4. Do not commit `.env`, `corpus/`, `chroma_db/`, or `results*/` without being asked. Never print API keys.
 5. Keep `docs/design-doc` claims true. If the code diverges from the design doc, say so and tell the owner.
 6. Never use real employer incidents, names, or data.
-7. Report honestly: n=12 incidents is small; runbooks were written by the scenario author, so
+7. Report honestly: n=18 incidents (6 per difficulty tier) is small; runbooks were written by the scenario author, so
    retrieval-assisted accuracy is an upper bound. Say both in the write-up.
-8. Money: ask before launching a full run (about 108 runs; multi-agent is the expensive one). Use `--scenarios` and `--runs 1` first.
+8. Money: ask before launching a full run (about 162 runs; multi-agent is the expensive one). Use `--scenarios` and `--runs 1` first.
 
 ## Known untested-in-sandbox items (verify first, in this order)
 1. `triage/llm.py` against the real provider; check `with_structured_output` accepts `TriageResult`, `Plan`, `Finding`, `Synthesis` (schemas have no defaults on purpose; if a strict-schema provider rejects one, simplify `schema.py`).
@@ -64,7 +64,7 @@ python -m triage.evals.labels agreement labels.csv
 
 ## Sunday plan
 1. Set up `.env`, install, `pytest -q`.
-2. Smoke test one scenario with `single`; read the trace in `results/runs.jsonl`. Tune `prompts.py` on the 2 to 3 dev scenarios only (say which in the log), not on all 12.
+2. Smoke test one scenario with `single`; read the trace in `results/runs.jsonl`. Tune `prompts.py` on the 2 to 3 dev scenarios only (say which in the log), not on all 18.
 3. Fetch corpus, build index with real embeddings, run `retrieval_eval`; try chunk sizes 600/900/1400 and record the table.
 4. Run the full evaluation (3 repeats), generate the report.
 5. Export ~20 labels, label them by hand BEFORE looking at the judge columns, compute agreement.

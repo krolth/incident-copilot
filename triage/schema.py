@@ -75,7 +75,7 @@ class Alert(BaseModel):
 
 class TriageResult(BaseModel):
     category: Category = Field(description="Root-cause category; use insufficient_evidence if the data cannot support one.")
-    component: str = Field(description="The failing service, host, or credential, e.g. 'matchmaking-svc'; 'unknown' if insufficient_evidence.")
+    component: str = Field(description="The failing service, host, or credential, e.g. 'matchmaking'; 'unknown' if insufficient_evidence.")
     summary: str = Field(description="Two to four sentences: what is wrong and why, grounded in the evidence.")
     evidence_ids: list[str] = Field(description="Ids copied exactly from tool output that support the diagnosis, e.g. L0231, D2, M:svc:metric:1h, K:RB-01#0.")
     recommended_runbook: RunbookId = Field(description="The runbook id only, e.g. RB-01.")

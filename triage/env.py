@@ -50,7 +50,7 @@ class SearchLogsArgs(BaseModel):
 
 
 class GetMetricsArgs(BaseModel):
-    service: str = Field(description="Service name, e.g. 'matchmaking-svc'.")
+    service: str = Field(description="Service name, e.g. 'matchmaking'.")
     metric: str = Field(description="Metric name, e.g. 'error_rate_pct', 'latency_p99_ms', 'cpu_pct', 'memory_pct', 'request_rate_rps'.")
     window: str = Field("1h", description="Look-back window ending now: 15m, 1h, 6h, 24h or 7d.")
 

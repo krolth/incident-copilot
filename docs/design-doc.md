@@ -9,7 +9,7 @@ Given one automated alert from a simulated live-service platform, the system nam
 - **Input:** one alert (for example, "matchmaking-svc p99 latency above 2s") plus tool access to mock logs, metrics, deploy history, and a knowledge base of runbooks and past incidents.
 - **Output:** a structured result with the root-cause category and failing component, cited evidence, a recommended action, and an "insufficient evidence" option.
 - **Root-cause categories (6):** bad deploy or config change; dependency saturation or retry storm; resource leak; traffic spike beyond capacity; node or infrastructure failure; expired certificate or credential.
-- **Scenarios:** 12 hand-built incidents with known root causes: 10 answerable and 2 where the correct answer is "insufficient evidence". Each answerable incident contains a trap, such as a red-herring deploy or two simultaneous anomalies. All scenario data is synthetic and labeled as such.
+- **Scenarios:** 18 hand-built incidents with known root causes, all on one fictional system (an online chess platform, `docs/system.md`): 15 answerable and 3 where the correct answer is "insufficient evidence". They come in three difficulty tiers of 6: easy (the obvious read is right), medium (one natural coincidence, such as an unrelated deploy) and hard (real misdirection, or the right answer is to abstain). Ground truth is the mitigation to apply now. All scenario data is synthetic and labeled as such.
 
 **Research question:** does a coordinator with specialist agents (logs, metrics, knowledge) beat a single agent with the same tools on root-cause accuracy, and what does it cost in tokens, latency, and dollars?
 
@@ -61,7 +61,7 @@ Out of scope: live Elasticsearch, Grafana or chat-ops integrations, and real com
 
 ## Evaluation Criteria
 
-Each approach runs all 12 incidents three times, so run-to-run variance is reported. Judge scores are validated against about 20 of my hand labels and used only if agreement is strong; failed runs are read in full and classified in the README.
+Each approach runs all 18 incidents three times, so run-to-run variance is reported, and results are also broken down by difficulty tier. Judge scores are validated against about 20 of my hand labels and used only if agreement is strong; failed runs are read in full and classified in the README.
 
 | Metric | How it is measured | Type |
 | --- | --- | --- |

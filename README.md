@@ -11,7 +11,7 @@ Offline harness complete and tested (34 tests). **Real-model results: none yet.*
 section is filled in only from a real run (see `CLAUDE.md`, Sunday plan).
 
 ## Design in one paragraph
-12 deterministic incidents (10 answerable, 2 unanswerable) generate logs, metrics and deploys on demand.
+18 deterministic incidents on one fictional chess platform (15 answerable, 3 unanswerable; 6 easy, 6 medium, 6 hard) generate logs, metrics and deploys on demand.
 Four tools expose them like production systems would: `search_logs`, `get_metrics`, `get_recent_deploys`,
 `search_knowledge` (ChromaDB over 8 runbooks plus postmortems). Three approaches share one typed output:
 A fixed pipeline, B single ReAct agent, C coordinator with logs/metrics/knowledge specialists.
@@ -28,7 +28,7 @@ and two cases where the right answer is "not enough evidence".
 - 3 repeats per cell to expose run-to-run variance.
 
 ## Limitations (stated up front)
-- 12 incidents is a small sample; differences of one incident are noise.
+- 18 incidents (6 per tier) is a small sample; differences of one incident are noise.
 - Runbooks and scenarios share an author, so retrieval-assisted accuracy is an upper bound.
 - Simulated tools return clean text; real Elasticsearch/Grafana output is messier.
 

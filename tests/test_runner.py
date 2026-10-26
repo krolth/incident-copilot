@@ -11,7 +11,11 @@ def test_fake_runner_end_to_end_and_banners(tmp_path):
     assert (out / "FAKE_RUN_NOT_EVALUATION_DATA.txt").exists()
     meta = json.loads((out / "meta.json").read_text())
     assert meta["fake"] and meta["scenario_fingerprint"]
-    assert "NOT EVALUATION DATA" in build_report(str(out))
+    report = build_report(str(out))
+    assert "NOT EVALUATION DATA" in report
+    # s01 is medium, s11 hard: both tiers get a column, and every record carries its tier
+    assert "## By difficulty" in report and "| medium | hard |" in report
+    assert {r["difficulty"] for r in recs} == {"medium", "hard"}
 
 
 def test_resume_skips_finished_runs(tmp_path):

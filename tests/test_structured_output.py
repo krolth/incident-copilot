@@ -10,7 +10,7 @@ from triage.scenarios import get_scenario
 from triage.schema import TriageResult
 from triage.testing.fake_llm import FakeChat, OraclePolicy
 
-VALID = dict(category="bad_change", component="matchmaking-svc", summary="s", evidence_ids=["D2"],
+VALID = dict(category="bad_change", component="matchmaking", summary="s", evidence_ids=["D2"],
              recommended_action="revert", confidence="high")
 
 

@@ -89,6 +89,7 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
             rec["judge_usage"] = jtracker.as_dict()
             rec["judge_trace"] = jtrace.events
         rec["fake"] = fake
+        rec["difficulty"] = sc.difficulty
         with lock:
             records.append(rec)
             f.write(json.dumps(rec) + "\n")

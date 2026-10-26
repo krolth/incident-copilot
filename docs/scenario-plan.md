@@ -34,8 +34,8 @@ expired_credential 1, infra_failure 2, insufficient_evidence 3.
 | s14 | easy | bad_change / RB-01 | gateway rate-limit config push returns 429 to normal players; the push is in the `config-agent` log right at onset | none |
 | s15 | medium | bad_change / RB-01 | game-server version mishandles clocks in bullet only; other time controls fine | errors are a small share of all games, so overall metrics look mildly degraded |
 | s16 | easy | traffic_spike / RB-04 | weekly arena (Friday 19:00 UTC) pushes matchmaking to its autoscaling max | none |
-| s17 | hard | resource_leak / RB-03 | game checkpoints in `redis-live` stop expiring (TTL not set); redis-live memory grows for days until eviction makes it slow; no deploy | the alert is game-server move latency, far from the cause |
-| s18 | hard | insufficient_evidence / RB-08 | a matchmaking config push and an unhealthy node start in the same minute; the evidence supports both equally | picking either one. **Owner to confirm this is fair, not just ambiguous** |
+| s17 | hard | resource_leak / RB-03 | game checkpoints in `redis-live` stop expiring (TTL not set); redis-live memory grows for days until writes fail (OOM at maxmemory) and game servers stall on checkpoints; no deploy | the alert is game-server move latency, far from the cause |
+| s18 | hard | insufficient_evidence / RB-08 | a matchmaking config push and an unhealthy node start in the same minute; the evidence supports both equally | picking either one (owner confirmed fair, 2026-10-26) |
 
-**Changes this causes elsewhere:** the design doc's "12 incidents" becomes 18; a full evaluation is 18 × 3 approaches ×
+**Status:** implemented in `triage/scenarios/defs.py` (2026-10-25). **Changes this caused elsewhere:** the design doc's "12 incidents" becomes 18; a full evaluation is 18 × 3 approaches ×
 3 runs = 162 runs (CLAUDE.md says about 108); scenarios get a `difficulty` field and the report a by-tier breakdown.

@@ -1,4 +1,4 @@
-"""Scenario registry. `all_scenarios()` builds the 12 incidents deterministically."""
+"""Scenario registry. `all_scenarios()` builds the 18 incidents deterministically."""
 from __future__ import annotations
 
 import hashlib
