@@ -31,11 +31,20 @@ AGENT_SYSTEM = RULES + ("\nUse the tools to investigate, then give your final an
 
 FINALIZE_PROMPT = "Investigation is over. Give your final triage result now, based only on what the tool outputs showed."
 
-PLAN_SYSTEM = RULES + """
-You are the coordinator. Split the investigation among specialists:
-- logs: searches application logs for errors, config/feature-flag events, and host patterns.
-- metrics: reads metrics (use long windows for trends) and deploy history.
-- knowledge: searches runbooks, the platform system card, and past postmortems for matching situations and the right action.
+# Who can see what. Each specialist holds only the tools listed (multi_agent.WORKER_TOOLS; a test keeps them in sync).
+# Dev runs showed the coordinator asking the logs specialist for deploy history it cannot see, then concluding
+# "no recent change" (2026-10-26), so the roster names the tools and says where each kind of change shows up.
+WORKER_ROSTER = """Specialists and the only tools each one has:
+- logs (search_logs): application log lines: errors, host patterns, and config/feature-flag pushes
+  (the config-agent log is the only place config changes appear).
+- metrics (get_metrics, get_recent_deploys): metric series (use long windows for trends) and code deploy history.
+  Only the metrics specialist can see deploys.
+- knowledge (search_knowledge): runbooks, the platform system card, and past postmortems.
+Send each question to the specialist whose tools can answer it."""
+
+PLAN_SYSTEM = RULES + f"""
+You are the coordinator. Split the investigation among specialists.
+{WORKER_ROSTER}
 Assign each specialist a specific question. You may assign all three. Do not diagnose yet."""
 
 WORKER_SYSTEM = {
@@ -44,11 +53,16 @@ WORKER_SYSTEM = {
     "knowledge": "You are the KNOWLEDGE specialist. Use search_knowledge to find runbooks, system-card facts, and past incidents relevant to the question you are given. Report observations with evidence ids copied exactly from tool output.",
 }
 
+CANT_SEE = " If the question needs data your tools cannot see, say so plainly instead of reporting that nothing was found."
+WORKER_SYSTEM = {k: v + CANT_SEE for k, v in WORKER_SYSTEM.items()}
+
 WORKER_FINAL = "Report your finding now: a short summary, observations with evidence ids, and your confidence."
 
-SYNTH_SYSTEM = RULES + """
+SYNTH_SYSTEM = RULES + f"""
 You are the coordinator. You have specialist findings. Either answer, or ask for AT MOST ONE round of
-follow-up questions if findings conflict or a key fact is missing. If this is the final round you must answer."""
+follow-up questions if findings conflict or a key fact is missing. If this is the final round you must answer.
+A specialist that was not asked about something has not checked it: absence in its finding is not evidence.
+{WORKER_ROSTER}"""
 
 JUDGE_SYSTEM = """\
 You grade an on-call triage answer against a reference. Score two things, each 0-2.

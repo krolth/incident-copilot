@@ -48,3 +48,11 @@ def test_fixed_pipeline_never_uses_long_windows(retriever):
     rec = execute(APPROACHES["fixed"], "fixed", sc, oracle_llm(sc), retriever)
     assert all(c["args"].get("window", "1h") in ("1h", "24h") for c in rec.calls if c["tool"] != "search_knowledge")
     assert not any("7d" in i for i in rec.seen_ids)
+
+
+def test_worker_roster_names_each_workers_real_tools():
+    from triage.approaches.multi_agent import WORKER_TOOLS
+    from triage.prompts import PLAN_SYSTEM, SYNTH_SYSTEM, WORKER_ROSTER
+    for worker, tools in WORKER_TOOLS.items():
+        assert f"- {worker} ({', '.join(tools)})" in WORKER_ROSTER
+    assert WORKER_ROSTER in PLAN_SYSTEM and WORKER_ROSTER in SYNTH_SYSTEM
