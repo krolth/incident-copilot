@@ -15,10 +15,10 @@ from triage.scenarios.model import Scenario
 from triage.schema import TriageResult
 
 
-# Model steps for the single agent's ReAct loop (multi-agent workers have their own `worker_steps`, default 5).
+# Model steps for the single agent's ReAct loop (multi-agent workers have their own `worker_steps`, WORKER_STEPS).
 # 8 cut off half the single-agent dev runs mid-investigation (2026-10-26); every cap hit is recorded and reported.
 MAX_STEPS = 12
-WORKER_STEPS = 5  # per multi-agent worker ReAct loop
+WORKER_STEPS = 8  # per multi-agent worker ReAct loop; 5 cut off a worker in every multi dev run (2026-10-26)
 
 
 class UsageTracker(BaseCallbackHandler):
