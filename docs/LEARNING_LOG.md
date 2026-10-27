@@ -11,6 +11,15 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-27: dev tuning closed; prompts frozen for the full local run
+- **Decision:** stop tuning after dev5. Last dev numbers (dev scenarios only, not results): fixed 9/9, single 7/9,
+  multi 6/9. The remaining misses are model limits (ignoring the explicit bad_change tie-break rule; treating a
+  system-card dependency as proof of saturation), not routing or plumbing bugs, and more rounds on three
+  scenarios risk fitting the prompts to them.
+- **Changes from dev tuning, all general:** log histogram, step caps 12 (single) and 8 (worker), worker roster
+  in the coordinator prompts, four prompt rules, `resource_leak` definition aligned with RB-03.
+- **Run:** 18 scenarios × 3 approaches × 3 repeats = 162, local, one at a time (estimated ~4 h). Owner approved.
+
 ## 2026-10-26: first dev tuning round (details per batch in `docs/run-log.md`)
 - **Surprise / failure:** the s11 log gap was invisible: `search_logs` showed 20 lines and hid the rest, so no
   agent could have seen it. **Decision:** add a count histogram to `search_logs` (like the bar chart above Kibana
