@@ -17,6 +17,32 @@ creation time and end is the last write to its `runs.jsonl` (reconstructed, mark
 is wall-clock minus summed agent latency, valid only because the batches ran one run at a time. From the next
 batch on, `meta.json` records start, end, wall-clock, judge latency per run, git commit and a prompts hash.
 
+## 2026-10-26 · results_dev4_multi8 · multi-agent only, worker cap 5 → 8
+
+- **Changed since dev3_new:** worker step cap 5 → 8 (owner approved). Prompts unchanged (`74a1ec17cf0c`, file hash).
+- **Code:** commit `2476047`, clean. **n:** 3 scenarios × multi × 3 runs = 9.
+- **Runtime (recorded):** wall-clock 20.5 min; agent 14.3 min; judge 6.2 min.
+
+| | category acc | judge action | judge evidence | citation valid | runs with a cap hit | tool calls | tokens in/out | latency s |
+|---|---|---|---|---|---|---|---|---|
+| worker cap 5 (dev3_new) | 6/9 | 0.75 | 1.75 | 94% | 9/9 | 9.2 | 20718/10321 | 221.3 |
+| worker cap 8 | 3/9 | 0.44 | 1.00 | 92% | 5/9 | 13.1 | 28399/4163 | 95.3 |
+
+- **Per incident:** s01 0/3, s08 2/3, s11 1/3.
+- **Accuracy fell, 6/9 to 3/9.** Not significant at n=9 (Fisher p≈0.35), but the misses are informative:
+  - s01, all three: dependency_saturation. Only one run called `get_recent_deploys` at all; it found D2, described
+    it as the cause, and still filed dependency_saturation, against the explicit rule "choose bad_change whenever a
+    recent change is the trigger". The other two never looked for deploys (the routing problem, fixed in `bd00744`).
+  - s11, two runs: bad_change. With more steps the metrics worker searched 7 days back and found the 3-day-old
+    "Bump JSON library" deploy, the scenario's intended trap. More budget gave the trap more chances to work.
+  - s08 #0: never saw the DNS logs; guessed "identity provider saturated".
+- **Surprise:** runs got faster and output tokens fell by 60% (10,321 → 4,163). With cap 5 the cut-off workers'
+  final reports were long; with room to finish they write shorter ones. Cap hits fell from 9/9 to 5/9 runs.
+- **Found while reading:** the `resource_leak` definition still said "restart affected instances", contradicting
+  RB-03 (fixed in `3e341fd`); and the prompts hash covered `prompts.py` only, missing `schema.py`'s category
+  definitions (fixed in the same commit; hashes from `3e341fd` on are not comparable with earlier ones).
+- **Kept:** cap 8. The cap is a budget, not a tuning knob: an approach should not be scored on being cut off.
+
 ## 2026-10-26 · results_dev3_old · baseline prompts, histogram, cap 12
 
 - **Purpose:** the "before" arm of a prompt comparison; identical to dev3_new except `prompts.py`.
