@@ -17,6 +17,32 @@ creation time and end is the last write to its `runs.jsonl` (reconstructed, mark
 is wall-clock minus summed agent latency, valid only because the batches ran one run at a time. From the next
 batch on, `meta.json` records start, end, wall-clock, judge latency per run, git commit and a prompts hash.
 
+## 2026-10-26 · results_dev5_roster · multi-agent only, worker roster in coordinator prompts
+
+- **Changed since dev4:** the coordinator's planning and follow-up prompts name each specialist's exact tools and
+  say only metrics sees deploys; workers say when a question needs data they cannot see (`bd00744`).
+  Started before `3e341fd`, so it has the old `resource_leak` wording (no effect on these three scenarios).
+- **Code:** commit `bd00744`, clean; prompts `cbbf5aa74e6c` (rendered-prompt hash; not comparable with earlier hashes).
+  Worker cap 8. **n:** 9.
+- **Runtime (recorded):** wall-clock 19.9 min; agent 12.0 min; judge 7.9 min.
+
+| | category acc | judge action | judge evidence | citation valid | key cited | runs with a cap hit | tokens in/out | latency s |
+|---|---|---|---|---|---|---|---|---|
+| dev4 (no roster) | 3/9 | 0.44 | 1.00 | 92% | 21% | 5/9 | 28399/4163 | 95.3 |
+| roster | 6/9 | 1.11 | 1.56 | 92% | 31% | 3/9 | 23071/3534 | 80.0 |
+
+- **Per incident:** s01 2/3, s08 3/3, s11 1/3.
+- **Routing:** the metrics worker checked deploys in 3/3 s01 runs (dev4: 1/3). Once (s01 #2) the coordinator still
+  also asked logs about deploys, but metrics checked them too.
+- **s01 #2 still wrong the same way as before:** saw D2, described the retry surge it caused, filed
+  dependency_saturation. The model does not apply the explicit tie-break rule reliably.
+- **New failure mode, s11 (two runs, dependency_saturation):** with no deploy to blame, the knowledge worker's
+  system-card passages (K:SYS#8, #12: stats depends on chess-db and redis-cache) supplied a plausible saturation
+  story, though no dependency metric was abnormal. The system card is doing what it should (describing the
+  platform); the model treats "could cause this" as "did cause this".
+- **Kept:** the roster. 3/9 to 6/9 is not significant at n=9, but the mechanism it targets (who checks deploys)
+  changed as intended in the traces.
+
 ## 2026-10-26 · results_dev4_multi8 · multi-agent only, worker cap 5 → 8
 
 - **Changed since dev3_new:** worker step cap 5 → 8 (owner approved). Prompts unchanged (`74a1ec17cf0c`, file hash).
