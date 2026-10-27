@@ -35,14 +35,17 @@ REPO = Path(__file__).resolve().parents[2]
 
 
 def code_version() -> dict:
-    """Which code and prompts produced a batch: commit, uncommitted changes, and a hash of prompts.py
-    (prompts are the thing tuned between dev batches, so they get their own fingerprint)."""
+    """Which code and prompts produced a batch: commit, uncommitted changes, and a hash of the prompt text the
+    models receive (prompts are what is tuned between dev batches, so they get their own fingerprint). Hashes the
+    rendered constants, not prompts.py, because the prompts embed category definitions from schema.py."""
     def git(*args):
         try:
             return subprocess.run(["git", *args], cwd=REPO, capture_output=True, text=True, timeout=10).stdout.strip()
         except (OSError, subprocess.SubprocessError):
             return None
-    prompts = (REPO / "triage" / "prompts.py").read_bytes()
+    import triage.prompts as P
+    prompts = json.dumps({k: v for k, v in vars(P).items() if k.isupper() and isinstance(v, (str, dict))},
+                         sort_keys=True).encode()
     status = git("status", "--porcelain")
     return {"git_commit": git("rev-parse", "--short", "HEAD") or None,
             "git_dirty": None if status is None else bool(status),

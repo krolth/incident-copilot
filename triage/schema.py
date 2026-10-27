@@ -31,7 +31,8 @@ Root-cause categories (pick the one that decides which runbook action fixes it):
 - dependency_saturation: a shared dependency (database, cache, store) is overloaded by load that was
   NOT introduced by a recent change (batch jobs, cold caches, slow queries). Action: throttle or shed that load.
 - resource_leak: a resource (memory, file descriptors, disk, connections) grows steadily with no recent
-  change as the trigger. Action: restart affected instances, capture diagnostics.
+  change as the trigger. Action: capture diagnostics, then reclaim it one instance at a time (game servers:
+  cordon and drain or migrate first, never a bare restart).
 - traffic_spike: legitimate demand exceeds provisioned capacity. Action: scale out or shed load.
 - infra_failure: a host, network, DNS, or upstream provider failure. Action: drain/replace the node or fail over.
 - expired_credential: a certificate, token, or key expired or was revoked. Action: rotate it.

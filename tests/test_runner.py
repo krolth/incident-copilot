@@ -60,3 +60,11 @@ def test_judge_usage_and_retry_policy_are_recorded(tmp_path):
     recs = run_all(str(out), ["fixed"], ["s01"], 1, fake=True)
     assert recs[0]["judge_usage"]["llm_calls"] == 1 and "judge_trace" in recs[0]
     assert json.loads((out / "meta.json").read_text())["retry_policy"]["max_retries"] == 3
+
+
+def test_prompts_hash_covers_category_definitions(monkeypatch):
+    import triage.prompts as P
+    from triage.evals.runner import code_version
+    before = code_version()["prompts_sha256"]
+    monkeypatch.setattr(P, "RULES", P.RULES.replace("bad_change", "bad_change!"))
+    assert code_version()["prompts_sha256"] != before
