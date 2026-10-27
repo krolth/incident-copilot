@@ -17,6 +17,46 @@ creation time and end is the last write to its `runs.jsonl` (reconstructed, mark
 is wall-clock minus summed agent latency, valid only because the batches ran one run at a time. From the next
 batch on, `meta.json` records start, end, wall-clock, judge latency per run, git commit and a prompts hash.
 
+## 2026-10-26 · results · FULL EVALUATION, all 18 scenarios
+
+- **Changed since dev5:** `resource_leak` definition aligned with RB-03 (`3e341fd`); prompts frozen (`0d1a715`).
+- **Code:** commit `0d1a715`, clean; prompts `b6f1da57e141`. Single-agent cap 12, worker cap 8.
+  **n:** 18 scenarios × 3 approaches × 3 repeats = 162. Owner approved.
+- **Runtime (recorded):** 20:06 to 23:48 PDT, wall-clock 222.5 min (estimate was 230 to 270); agent 103.4 min,
+  judge 119.1 min. Mean agent latency per run: fixed 9.6 s, single 22.1 s, multi 83.3 s. Exit 0, no crash.
+
+| approach | category acc | held-out (n=45) | dev (n=9) | easy | medium | hard | judge action | judge evidence | citation valid | key cited | tokens in/out | latency s |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| fixed | 27/54 (50%) | 47% | 67% | 67% | 67% | 17% | 0.69 | 1.26 | 90% | 22% | 3031/448 | 9.6 |
+| single | 29/54 (54%) | 47% | 89% | 56% | 44% | 61% | 0.63 | 1.31 | 86% | 18% | 22886/871 | 22.1 |
+| multi | 30/54 (56%) | 49% | 89% | 39% | 67% | 61% | 0.72 | 1.25 | 86% | 24% | 25348/3668 | 83.3 |
+
+- **Headline:** on held-out scenarios the three approaches are indistinguishable (21, 21 and 22 of 45). Multi costs
+  ~8x the tokens and ~9x the latency of fixed for no measurable gain. Dev accuracy (67 to 89%) is well above
+  held-out (47 to 49%): the prompts fit the dev scenarios, which is why held-out is the number to quote.
+- **Run-to-run variance:** fixed 0.0 pts (identical every repeat), single 2.6, multi 7.9.
+- **Where they differ is the tier, not the total:** fixed wins easy/medium but gets 17% on hard, because it never
+  abstains correctly (s11, s12, s18: 0/9). Both agents get 8/9 or more on the abstain cases.
+- **Dominant failure: false abstention.** `insufficient_evidence` on a scenario with a real cause: fixed 10/45,
+  single 15/45, multi 12/45 non-abstain runs. It is the most common wrong answer for every approach.
+- **0/9 for every approach:** s03 (traffic spike + one hot host), s07 (config push only in `config-agent` log),
+  s14 (easy: gateway rate-limit push at onset). Also s02 (easy, canary memory leak) 1/9 total.
+- **Traces read so far:**
+  - s02 single #0: checked deploys with `window=1h` (the canary was 150 min earlier), searched logs at ERROR or
+    for "Memory usage" (the lines say "memory 91% of limit"), never asked for `memory_pct_max_host` (fleet mean
+    rises only 7 points). Narrow queries, then abstained. A real agent failure, not a scenario fault; but metric
+    names are only discoverable from the error message of a wrong `get_metrics` call (tool design limitation,
+    same for all approaches).
+  - s14: the fixed pipeline never looks at `config-agent` (by design), so it cannot see the push. The agents
+    looked at config logs in some runs (single 1/3, multi 3/3) and still answered traffic_spike or abstained.
+  - s07 multi #1 saw all key evidence (key_seen 1.0) and still abstained: reasoning failure, not retrieval.
+  - s04 fixed, all three: correct category, but cited 428 to 787 log ids it had not seen (it extrapolated the
+    id sequence from a few lines). Shows as citation valid 1 to 2% on those runs and pulls fixed's average down.
+- **Knowledge search:** single agent 2/54 runs (the prompt instruction does not work); multi 45/54; fixed 54/54.
+- **Errors:** one multi run (s04 #1) failed with invalid JSON after all retries; counted as wrong.
+- **Not yet done:** hand labels and judge agreement (judge columns are unvalidated until then); the remaining
+  "Runs to read by hand".
+
 ## 2026-10-26 · results_dev5_roster · multi-agent only, worker roster in coordinator prompts
 
 - **Changed since dev4:** the coordinator's planning and follow-up prompts name each specialist's exact tools and

@@ -11,6 +11,21 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-27: full local evaluation (162 runs; details in `docs/run-log.md`)
+- **Evidence:** held-out category accuracy fixed 21/45, single 21/45, multi 22/45. No difference between
+  approaches; multi costs ~8x the tokens and ~9x the latency of fixed. Dev accuracy was 67 to 89%, so the
+  prompts fit the dev scenarios: held-out is the honest number.
+- **Surprise:** the approaches differ by tier, not in total. Fixed is best on easy/medium and never abstains
+  correctly (0/9 on s11, s12, s18); both agents get 8/9 there. Agency buys calibrated abstention, not diagnosis.
+- **Surprise / failure:** the most common wrong answer for every approach is a false abstention (10 to 15 of 45
+  non-abstain runs). Traces show narrow searches (short deploy window, keyword filters that miss the key line),
+  then "insufficient evidence". The agents abstain correctly *and* wrongly: they abstain a lot.
+- **Surprise:** s03, s07 and s14 are 0/9 for every approach; s14 is easy-tier. In s07 one multi run saw every key
+  item and still abstained, so it is reasoning, not retrieval.
+- **Not changed:** ground truth and prompts stay frozen (rule 2). Metric names being discoverable only through an
+  error message is a tool limitation shared by all approaches; noted for the write-up, not fixed after the fact.
+- **Next:** hand labels before reading the judge columns; read the remaining runs; failure taxonomy.
+
 ## 2026-10-27: dev tuning closed; prompts frozen for the full local run
 - **Decision:** stop tuning after dev5. Last dev numbers (dev scenarios only, not results): fixed 9/9, single 7/9,
   multi 6/9. The remaining misses are model limits (ignoring the explicit bad_change tie-break rule; treating a
