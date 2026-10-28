@@ -24,7 +24,25 @@ Template:
   item and still abstained, so it is reasoning, not retrieval.
 - **Not changed:** ground truth and prompts stay frozen (rule 2). Metric names being discoverable only through an
   error message is a tool limitation shared by all approaches; noted for the write-up, not fixed after the fact.
-- **Next:** hand labels before reading the judge columns; read the remaining runs; failure taxonomy.
+- **Did we expect multi to win?** No prediction was written down before the run; the design doc asks the question
+  without one, so the write-up must not claim one after the fact. Multi has no extra tools by design (same four
+  tools, same data): the only variable is control flow.
+- **Why it could have won:** every specialist always looks at its area (knowledge searched 45/54 runs vs single's
+  2/54); each worker has a short, focused context; the coordinator can ask for a follow-up round.
+- **Why it didn't (hypotheses from the traces, to check in the failure analysis):**
+  - *Handoff loss:* the coordinator reads workers' summaries, not raw evidence. s07 multi #1 had every key item
+    and still abstained: more coverage, same decision.
+  - *Splitting separates the signals triage needs together:* e.g. "error-rate metric high before the first ERROR
+    log line" (s11) needs logs and metrics in one head; the logs and metrics workers each hold half.
+  - *Routing is one more step that can fail:* in dev the coordinator asked the logs worker about deploys it
+    cannot see (fixed with the roster, but it is still a step).
+  - *Model limit:* gpt-oss:20b at low reasoning; each coordination step is another chance to slip.
+- **Framing for the write-up:** with this model, splitting the investigation bought coverage but not better
+  decisions; the bottleneck is synthesis. Agency did pay off in one place: calibrated abstention (agents 8/9, fixed
+  0/9). A null result at 8x tokens and 9x latency is a finding, not a failure.
+- **Next:** hand labels before reading the judge columns; read the remaining runs and test the hypotheses above
+  (failure taxonomy); optionally re-run on a stronger hosted model (OpenAI config, cost estimate first) to separate
+  "model limit" from "architecture": if multi still doesn't pull ahead there, it is the architecture.
 
 ## 2026-10-27: dev tuning closed; prompts frozen for the full local run
 - **Decision:** stop tuning after dev5. Last dev numbers (dev scenarios only, not results): fixed 9/9, single 7/9,
