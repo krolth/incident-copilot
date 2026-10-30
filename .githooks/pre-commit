@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refuse commits that would publish a secret. Enable once per clone with: git config core.hooksPath .githooks
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+if echo "$staged" | grep -E -q '(^|/)\.env$'; then
+  echo "pre-commit: refusing to commit .env (it holds API keys)." >&2
+  exit 1
+fi
+if git diff --cached -U0 --diff-filter=ACM | grep -E '^\+' | grep -E -q 'sk-[A-Za-z0-9_-]{20,}|sk-pr[o]j-|ghp_[A-Za-z0-9]{20,}|github_pa[t]_|AKIA[0-9A-Z]{16}|-----BEGIN [A-Z ]*PRIVATE KE[Y]'; then
+  echo "pre-commit: a staged change looks like an API key or private key. Remove it (keys belong in .env)." >&2
+  exit 1
+fi

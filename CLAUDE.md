@@ -30,6 +30,7 @@ Approaches: `fixed` (A, code chooses what to look at), `single` (B, one ReAct ag
 
 ## Commands
 ```
+git config core.hooksPath .githooks                                    # once per clone: blocks commits of .env or key-shaped strings
 pip install -r requirements.txt
 pytest -q
 python ingest/fetch_icco.py && python ingest/fetch_danluu.py          # corpus (git-ignored)
@@ -51,7 +52,7 @@ python -m triage.evals.labels agreement labels.csv
    rubric to fit results. If a scenario is genuinely wrong, log it in `docs/LEARNING_LOG.md`, fix it, and
    re-run everything (the scenario fingerprint in `meta.json` shows when results are stale).
 3. Tests stay green. Add a test with each behavior change. Run `pytest -q` before saying you are done.
-4. Do not commit `.env`, `corpus/`, `chroma_db/`, or `results*/` without being asked. Never print API keys.
+4. Do not commit `.env`, `corpus/`, `chroma_db/`, or `results*/` without being asked. Never print API keys. The repo is meant to be public: `.githooks/pre-commit` blocks key-shaped strings, and `site/` is deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to main.
 5. Keep `docs/design-doc` claims true. If the code diverges from the design doc, say so and tell the owner.
 6. Never use real employer incidents, names, or data.
 7. Report honestly: n=18 incidents (6 per difficulty tier) is small; runbooks were written by the scenario author, so
