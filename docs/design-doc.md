@@ -52,11 +52,37 @@ flowchart TD
 
 Approach B is this picture with the coordinator and workers collapsed into one agent holding all tools; approach A replaces the agents with a fixed sequence and a single LLM call.
 
+## Data Processing
+
+Two kinds of data feed the agents: the incident telemetry they investigate, and the knowledge base they retrieve from. Both are processed the same way for every approach.
+
+**Incident telemetry (generated, deterministic).** Each of the 18 incidents is code (`triage/scenarios/defs.py`) that generates its data from fixed seeds, so every run sees identical data:
+
+- **Logs:** 660 to 5,581 lines per incident (41,663 in all), covering 3 to 6 hours before the alert: routine traffic from every involved service, plus the lines that carry the evidence. Each line has a time, service, host, level and message, and an id (`L0868`) that answers cite.
+- **Metrics:** 15 to 25 series per incident (326 in all), each a baseline plus deterministic noise (and a daily wave on load-driven series such as CPU and request rate), plus the incident's effects (steps, ramps, spikes, gaps), readable over 15 minutes to 7 days.
+- **Changes:** deploy history with ids (`D1`, `D2`): the real trigger where there is one, and unrelated deploys as distractors. Config pushes appear only in the `config-agent` log, as on the real platform.
+- **Ground truth:** category, runbook, reference action and key evidence, written before any model runs; the code fingerprints each incident so stale results are detectable.
+
+**From raw data to tool output.** The tools turn raw data into what an on-call engineer would see, with stable ids for citation:
+
+- `search_logs` filters by service, level, keyword and window, shows at most 20 matching lines, and summarises the rest: count by level, top hosts, and a count histogram over the window that starts at log retention (so missing data shows as a gap, not as zeros).
+- `get_metrics` returns min, max, mean and last value plus 12 evenly spaced points (`M:service:metric:window`).
+- `get_recent_deploys` lists changes in the window; `search_knowledge` returns the top 4 chunks, 700 characters each, with chunk ids (`K:RB-01#2`).
+- Every id a tool returns is recorded, so citation validity is checked against what the agent actually saw.
+
+**Knowledge base (ingested, then indexed).**
+
+1. **Fetch:** `ingest/fetch_icco.py` copies the 242 icco postmortems (Markdown with YAML front matter); `ingest/fetch_danluu.py` parses the danluu list into 240 short categorised summaries. Both go to the git-ignored `corpus/`.
+2. **Load and clean:** front matter (company, categories, url) becomes metadata; the two sources are deduplicated by URL, keeping icco's full text, which leaves 318 postmortems. The 8 runbooks and sections 1 to 12 of the system card are added (its status notes and diagram are dropped). The scenario answer key is excluded by design, and a test enforces it.
+3. **Chunk:** recursive character splitting, 600 characters with 120 overlap: 1,266 chunks (46 runbook, 29 system card, 1,191 postmortem).
+4. **Embed and store:** `nomic-embed-text` embeddings in a local ChromaDB collection, with source id and kind (runbook, system, postmortem) on every chunk.
+5. **Check:** a labeled set of 25 diagnosis queries measures retrieval (hit@k, MRR); chunk size and k were chosen on it.
+
 ## Framework Justification
 
 - **LangGraph** runs approaches B and C. They then differ only in graph shape, and step limits are built in. Rejected: Pydantic AI (one framework for both B and C keeps the comparison clean) and smolagents (agents act by writing code, which changes the action model and needs sandboxing).
 - **Pydantic** types the output for all three approaches, so scoring does not depend on parsing free text. Output that fails validation counts as a failed run.
-- **ChromaDB via LangChain** is local, needs no server, and fits about 500 documents.
+- **ChromaDB via LangChain** is local, needs no server, and easily holds the 327 documents (1,266 chunks).
 - **Models:** one model drives every agent (API or local, behind a provider-neutral interface), so control flow is the only variable. A different model judges, to reduce self-preference bias. Each run is saved as a plain JSON trace for token, cost and failure analysis.
 
 Out of scope: live Elasticsearch, Grafana or chat-ops integrations, and real company data.
