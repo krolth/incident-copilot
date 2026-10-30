@@ -17,16 +17,16 @@
   .design .stats { display: flex; gap: 4px 16px; flex-wrap: wrap; font: 400 0.8rem/1.5 var(--font-mono); color: var(--ink-3); border-top: 1px solid var(--line); padding-top: 10px; }
   .design .stats b { color: var(--ink); }
   .flow { width: 100%; height: auto; display: block; }
-  .flow .fbox { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.3; }
+  .flow .fbox { fill: var(--surface); stroke: var(--line-strong); stroke-width: 1.3; filter: drop-shadow(0 2px 2px rgba(40, 20, 5, 0.35)); }
   .flow .fbox.llm { fill: var(--accent-soft); stroke: var(--accent); }
-  .flow .fbox.tool { fill: var(--surface-2); stroke: var(--line); }
-  .flow .fbox.io { fill: var(--surface); stroke: var(--ink-3); stroke-dasharray: 4 3; }
+  .flow .fbox.tool { fill: var(--surface-2); stroke: var(--line-strong); }
+  .flow .fbox.io { fill: var(--surface); stroke: var(--wood-ink); stroke-dasharray: 4 3; }
   .flow .ft { font: 650 13px var(--font-display); fill: var(--ink); font-stretch: 95%; }
   .flow .fs { font: 400 10px var(--font-mono); fill: var(--ink-3); }
-  .flow .farrow { stroke: var(--ink-3); stroke-width: 1.4; fill: none; }
+  .flow .farrow { stroke: var(--wood-ink); stroke-width: 1.6; fill: none; }
   .flow .farrow.loop { stroke: var(--accent); }
-  .flow .fl { font: 600 10px var(--font-mono); fill: var(--ink-2); }
-  .flow .ap-head { fill: var(--ink-3); }
+  .flow .fl { font: 700 10px var(--font-mono); fill: var(--wood-ink); }
+  .flow .ap-head { fill: var(--wood-ink); }
   .facts { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
   .fact { padding: 14px 16px; display: grid; gap: 4px; }
   .fact b { font: 700 var(--step-2)/1.1 var(--font-display); font-stretch: 92%; }
@@ -80,6 +80,7 @@
     const root = svg("svg", { viewBox: `0 0 ${W} ${H}`, class: "flow", role: "img" });
     root.append(svg("defs", {}, svg("marker", { id: "ah-" + id, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" },
       svg("path", { d: "M0,0 L10,5 L0,10 z", class: "ap-head" }))));
+    APP.wood(root, W, H, id);
     const B = Object.fromEntries(boxes.map((b) => [b.id, b]));
     const edgePt = (b, tx, ty) => { // where the line from the box centre toward (tx, ty) leaves the box
       const cx = b.x + b.w / 2, cy = b.y + b.h / 2, dx = tx - cx, dy = ty - cy;

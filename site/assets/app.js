@@ -78,6 +78,44 @@
         el("span", { class: "mono", text: m.map((x) => `${x.label}: ${x.runs} runs, commit ${x.commit}`).join(" · ") }))));
   };
 
+  // ---------- the board: wood grain and the fianchetto bishop ----------
+  // Grain is procedural (stretched fractal noise turned into brown streaks over a base colour), so it costs no image
+  // and follows the theme: maple in light mode, walnut in dark mode (colours in style.css).
+  APP.wood = function (root, W, H, id) {
+    const defs = root.querySelector("defs") || root.insertBefore(svg("defs"), root.firstChild);
+    defs.append(
+      svg("filter", { id: "grain-" + id, x: 0, y: 0, width: "100%", height: "100%", "color-interpolation-filters": "sRGB" },
+        svg("feTurbulence", { type: "fractalNoise", baseFrequency: "0.0035 0.11", numOctaves: 4, seed: 11, result: "n" }),
+        svg("feColorMatrix", { in: "n", type: "matrix", values: "0 0 0 0 0.24  0 0 0 0 0.13  0 0 0 0 0.05  1.9 0 0 0 -0.72" })),
+      svg("filter", { id: "rings-" + id, x: 0, y: 0, width: "100%", height: "100%", "color-interpolation-filters": "sRGB" },
+        svg("feTurbulence", { type: "turbulence", baseFrequency: "0.0012 0.018", numOctaves: 2, seed: 4, result: "r" }),
+        svg("feColorMatrix", { in: "r", type: "matrix", values: "0 0 0 0 0.30  0 0 0 0 0.17  0 0 0 0 0.07  2.4 0 0 0 -0.35" })));
+    root.append(
+      svg("rect", { x: 0, y: 0, width: W, height: H, rx: 10, class: "wood-base" }),
+      svg("rect", { x: 0, y: 0, width: W, height: H, rx: 10, filter: `url(#rings-${id})`, class: "wood-grain" }),
+      svg("rect", { x: 0, y: 0, width: W, height: H, rx: 10, filter: `url(#grain-${id})`, class: "wood-grain" }),
+      svg("rect", { x: 0.5, y: 0.5, width: W - 1, height: H - 1, rx: 10, class: "wood-edge" }));
+  };
+
+  // A carved bishop, the fianchetto piece. Drawn at (x, y) = top-left, about 100 x 150 units before scaling.
+  APP.bishop = function (root, x, y, s = 1) {
+    const g = svg("g", { class: "bishop", transform: `translate(${x},${y}) scale(${s})`, "aria-hidden": "true" });
+    const title = svg("title", { text: "Fianchetto: the bishop developed onto the long diagonal" });
+    g.append(title,
+      svg("ellipse", { cx: 50, cy: 151, rx: 46, ry: 6, class: "bishop-shadow" }),
+      svg("rect", { x: 8, y: 134, width: 84, height: 15, rx: 4, class: "bishop-body" }),
+      svg("rect", { x: 17, y: 122, width: 66, height: 14, rx: 4, class: "bishop-body" }),
+      svg("path", { d: "M31,122 C31,112 37,106 39,98 L61,98 C63,106 69,112 69,122 Z", class: "bishop-body" }),
+      svg("rect", { x: 27, y: 90, width: 46, height: 10, rx: 4, class: "bishop-body" }),
+      svg("path", { d: "M37,91 C21,77 24,50 50,28 C76,50 79,77 63,91 Z", class: "bishop-body" }),
+      svg("path", { d: "M58,47 L44,70", class: "bishop-cut" }),
+      svg("circle", { cx: 50, cy: 20, r: 9, class: "bishop-body" }),
+      svg("path", { d: "M41,88 C33,76 35,58 47,40", class: "bishop-shine" }),
+      svg("path", { d: "M22,136 L22,147", class: "bishop-shine" }));
+    root.append(g);
+    return g;
+  };
+
   // ---------- architecture diagram ----------
   // Grid positions from site.js scaled into one viewBox. Boxes 172 x 54.
   const BW = 172, BH = 54;
@@ -92,9 +130,11 @@
         svg("rect", { width: 7, height: 7, fill: "var(--surface-2)" }), svg("line", { x1: 0, y1: 0, x2: 0, y2: 7, stroke: "var(--gap)", "stroke-width": 2, opacity: 0.5 })),
       svg("filter", { id: "glow", x: "-30%", y: "-40%", width: "160%", height: "180%" }, svg("feGaussianBlur", { stdDeviation: 7 })));
     root.append(defs);
+    APP.wood(root, 1050, 660, "topo");
     // layer bands and column labels
-    root.append(svg("rect", { x: 8, y: Y(4.35), width: 1034, height: 660 - Y(4.35) - 6, rx: 8, fill: "var(--surface-2)" }));
+    root.append(svg("rect", { x: 8, y: Y(4.35), width: 1034, height: 660 - Y(4.35) - 6, rx: 8, class: "wood-band" }));
     root.append(svg("text", { x: 20, y: Y(4.35) + 20, class: "topo-band", text: "PLATFORM" }));
+    APP.bishop(root, 40, 500, 0.95);
     [["EDGE", 0.5], ["SERVICES", 2.5], ["DATA STORES · EXTERNAL", 4]].forEach(([t, x]) =>
       root.append(svg("text", { x: X(x) + BW / 2, y: 22, class: "topo-band", "text-anchor": "middle", text: t })));
     const byId = Object.fromEntries(S.nodes.map((n) => [n.id, n]));
