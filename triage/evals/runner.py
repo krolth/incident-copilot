@@ -100,8 +100,16 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
     lock = threading.Lock()
     # Spending cap for paid APIs: counts the agent's priced cost, plus the judge's when the judge is not local.
     # Checked before each run starts, so the overshoot is at most the runs already in flight (--parallel).
+    # The cap is for the whole folder: a --resume batch starts from what the earlier runs already spent.
     judge_paid = not fake and describe()["judge_provider"] != "ollama"
-    spent = {"usd": 0.0, "skipped": 0}
+
+    def run_cost(r: dict) -> float:
+        c = r["score"]["cost_usd"] or 0.0
+        if judge_paid:
+            c += cost_usd(r.get("judge_usage") or {}, describe()["judge_model"], pricing) or 0.0
+        return c
+
+    spent = {"usd": sum(run_cost(r) for r in records), "skipped": 0}
     if max_cost_usd is not None and not fake and cost_usd({"input_tokens": 1}, model_name, pricing) is None:
         raise SystemExit(f"--max-cost-usd needs a price for {model_name!r} in pricing.json")
     f = open(runs_path, "a" if resume else "w")
@@ -131,9 +139,7 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
         rec["difficulty"] = sc.difficulty
         rec["dev"] = is_dev(sc.id)  # prompts were tuned on it
         with lock:
-            spent["usd"] += rec["score"]["cost_usd"] or 0.0
-            if judge_paid:
-                spent["usd"] += cost_usd(rec.get("judge_usage", {}), describe()["judge_model"], pricing) or 0.0
+            spent["usd"] += run_cost(rec)
             records.append(rec)
             f.write(json.dumps(rec) + "\n")
             f.flush()

@@ -87,3 +87,12 @@ def test_openai_reasoning_effort(monkeypatch):
     assert _build("openai", "some-model", None, "low").reasoning_effort == "low"
     with pytest.raises(ValueError):
         _build("openai", "some-model", None, False)
+
+
+def test_spending_cap_counts_earlier_runs_on_resume(tmp_path, monkeypatch):
+    import triage.evals.runner as runner
+    monkeypatch.setattr(runner, "load_pricing", lambda: {"fake-oracle": {"input_per_mtok": 1e4, "output_per_mtok": 1e4}})
+    out = str(tmp_path / "capped")
+    run_all(out, ["fixed"], ["s01"], 1, fake=True, parallel=1)  # no cap: spends more than a cent
+    recs = run_all(out, ["fixed"], ["s01", "s08"], 1, fake=True, parallel=1, resume=True, max_cost_usd=0.01)
+    assert len(recs) == 1  # the s08 run is not started: the folder is already over the cap
