@@ -67,14 +67,18 @@
       <path d="M5 19.5h5l2-4 2 6 2-3h5" stroke="var(--accent)" stroke-width="1.6" fill="none" transform="translate(0 -1)"/></svg>`;
     const header = el("header", { class: "topbar" },
       el("div", { class: "topbar-inner" },
-        el("a", { class: "brand", href: "index.html", html: mark + `<span><span class="brand-name">Incident Copilot</span><br><span class="brand-sub">AI triage on the Fianchetto chess platform</span></span>` }),
+        el("a", { class: "brand", href: "index.html", html: mark + `<span><span class="brand-name">Incident Copilot</span><br><span class="brand-sub">AI triage on the Fianchetto chess platform</span><br><span class="brand-by">Sharad Cornejo Altuzar</span><br><span class="brand-sub">Capstone project, AI Engineering cohort (RAG &amp; Agents)</span></span>` }),
         el("nav", { class: "nav", "aria-label": "Pages" },
           PAGES.map(([href, label]) => el("a", { href, "aria-current": href === current ? "page" : null, text: label })))));
     document.body.prepend(header);
+    // the console's sticky toolbar sits under the header, whatever height the header wraps to
+    const setH = () => document.documentElement.style.setProperty("--topbar-h", header.offsetHeight + "px");
+    setH();
+    new ResizeObserver(setH).observe(header);
     const m = window.SITE.models;
     document.body.append(el("footer", {},
       el("div", { class: "wrap" },
-        el("span", { text: "Capstone project, AI Engineering cohort (RAG & Agents). All incidents, services and data are synthetic." }),
+        el("span", { text: "Sharad Cornejo Altuzar · Capstone project, AI Engineering cohort (RAG & Agents). All incidents, services and data are synthetic." }),
         el("span", { class: "mono", text: m.map((x) => `${x.label}: ${x.runs} runs, commit ${x.commit}`).join(" · ") }))));
   };
 

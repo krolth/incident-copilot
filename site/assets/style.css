@@ -168,6 +168,8 @@ body::before {
 .brand-mark { width: 26px; height: 26px; flex: none; }
 .brand-name { font-family: var(--font-display); font-weight: 700; font-stretch: 90%; font-size: 1.05rem; letter-spacing: 0.01em; }
 .brand-sub { color: var(--ink-3); font-size: var(--step--1); }
+.brand-by { color: var(--ink); font-size: var(--step--1); font-weight: 600; }
+.brand > span { line-height: 1.3; }
 .nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
 .nav a {
   color: var(--ink-2); text-decoration: none; padding: 6px 12px; border-radius: var(--radius); font-weight: 600; font-size: 0.95rem;
