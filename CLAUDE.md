@@ -25,6 +25,7 @@ Approaches: `fixed` (A, code chooses what to look at), `single` (B, one ReAct ag
 - `triage/testing/fake_llm.py` scripted fake model for offline tests
 - `ingest/` corpus downloaders (output goes to git-ignored `corpus/`)
 - `tests/` pytest; must stay green
+- `site/` the static presentation website (GitHub Pages): `index` findings, `console` run replay on the architecture, `results`, `method`. `python site/build_data.py` regenerates `site/data/*.js` from `results/` and `results_openai/`; rerun it after any new batch so the site never shows stale or invented numbers
 - `docs/run-log.md` one entry per real-model batch (what changed, settings, results, runtime, traces read); add one after every batch
 
 ## Commands

@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Incident Copilot</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Does a team of AI agents triage an outage better than one agent? 324 runs on 18 synthetic incidents, two models, three agent designs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=JetBrains+Mono:wght@400;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  .hero { display: grid; gap: 28px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: center; padding-block: 24px 40px; }
+  @media (max-width: 980px) { .hero { grid-template-columns: minmax(0, 1fr); } }
+  .hero-text { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .answer { border-left: 4px solid var(--accent); padding: 4px 0 4px 16px; display: grid; gap: 8px; max-width: 62ch; }
+  .answer p { color: var(--ink-2); }
+  .answer strong { color: var(--ink); }
+  .hero-fig { padding: 12px 14px 10px; display: grid; gap: 8px; }
+  .hero-fig figcaption { font-size: var(--step--1); color: var(--ink-2); }
+  .setup { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font: 600 0.9rem/1 var(--font-mono); color: var(--ink-2); }
+  .setup .x { color: var(--ink-3); font-weight: 400; }
+  .setup b { font: 700 var(--step-2)/1 var(--font-display); color: var(--ink); font-stretch: 92%; margin-right: 4px; }
+  .small-mult { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+  .sm-title { font: 600 0.85rem/1.3 var(--font-mono); color: var(--ink-2); }
+  .finding { padding: 18px 18px 16px; display: grid; gap: 10px; align-content: start; }
+  .finding .big { font: 700 var(--step-3)/1 var(--font-display); font-stretch: 90%; font-variant-numeric: tabular-nums; }
+  .finding .big small { font-size: 0.5em; color: var(--ink-3); font-weight: 600; }
+  .finding p { color: var(--ink-2); }
+  .finding a { font-weight: 600; font-size: 0.93rem; }
+  .finding.open { border-style: dashed; }
+  .limits { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+  .limits div { padding: 14px 16px; }
+  .limits b { display: block; color: var(--ink); margin-bottom: 4px; }
+  .limits p { color: var(--ink-2); font-size: 0.95rem; }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">Capstone · RAG &amp; Agents</p>
+      <h1>Does a team of AI agents triage an outage better than one agent?</h1>
+      <p class="lede">We built 18 incidents on a fictional chess platform, each with a known root cause, and had three agent designs triage every one of them, three times, on two models.</p>
+      <div class="answer" id="answer"></div>
+      <div class="row">
+        <a class="btn btn-primary" href="console.html">Open the incident console</a>
+        <a class="btn" href="results.html">See all results</a>
+      </div>
+    </div>
+    <figure class="panel hero-fig" style="margin: 0">
+      <div id="hero-topo"></div>
+      <figcaption id="hero-cap"></figcaption>
+    </figure>
+  </section>
+
+  <section class="section">
+    <p class="eyebrow">The experiment</p>
+    <div class="setup" id="setup"></div>
+    <p class="prose">Each run gets one alert and four tools: log search, metrics, deploy history and a knowledge base of runbooks and public postmortems (RAG). It must name the root-cause category, the failing component and the mitigation, or say there is not enough evidence. Three incidents have no single answer, so abstaining is the right call there. <a href="method.html">How it works</a></p>
+  </section>
+
+  <section class="section">
+    <div class="figure-head">
+      <p class="eyebrow">Finding 1</p>
+      <h2>With a capable model, one agent beats a team</h2>
+      <p>Root-cause category correct, on the 15 incidents that were not used to tune the prompts (45 runs per bar). On the small local model the three designs tie; on the hosted model they separate.</p>
+    </div>
+    <div class="small-mult" id="acc"></div>
+    <div class="legend" id="acc-legend"></div>
+  </section>
+
+  <section class="section">
+    <div class="grid-2">
+      <div class="figure">
+        <div class="figure-head">
+          <p class="eyebrow">Finding 2</p>
+          <h2>The team costs more and gets less right</h2>
+          <p>Held-out accuracy against cost per run. Hollow points are the local model, priced at what the same model costs from a hosting provider.</p>
+        </div>
+        <div id="scatter"></div>
+      </div>
+      <div class="figure">
+        <div class="figure-head">
+          <p class="eyebrow">Finding 3</p>
+          <h2>They fail by giving up</h2>
+          <p>How all 54 runs of each configuration ended. "Abstained wrongly" means it said "insufficient evidence" on an incident that had a clear cause.</p>
+        </div>
+        <div id="stacked"></div>
+        <div class="legend" id="stacked-legend"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="figure-head">
+      <p class="eyebrow">What the traces show</p>
+      <h2>Why it came out this way</h2>
+      <p>Each card links to a run you can replay in the console.</p>
+    </div>
+    <div class="grid-3" id="findings"></div>
+  </section>
+
+  <section class="section">
+    <div class="figure-head">
+      <p class="eyebrow">Read these numbers with care</p>
+      <h2>Limits</h2>
+    </div>
+    <div class="limits">
+      <div class="panel"><b>18 incidents is small.</b><p>Six per difficulty tier. Repeats of one incident are not independent, so the site also compares designs incident by incident.</p></div>
+      <div class="panel"><b>Retrieval is an upper bound.</b><p>The same person wrote the incidents and the runbooks the agents retrieve, so the runbooks fit the incidents better than real ones would.</p></div>
+      <div class="panel"><b>Prompts were tuned on three incidents.</b><p>s01, s08 and s11. Headline numbers leave them out ("held-out"); dev accuracy is much higher.</p></div>
+      <div class="panel"><b>The LLM judge is not validated yet.</b><p>Action and evidence scores come from a second model (qwen3.8:27b). They are marked pending until compared with an incident responder's hand labels. Category accuracy does not depend on the judge.</p></div>
+      <div class="panel"><b>Two models, one setting.</b><p>One small open model and one hosted model, both at low reasoning effort, with prompts frozen before either full run.</p></div>
+      <div class="panel"><b>Synthetic data.</b><p>The platform, incidents, logs and metrics are invented. No employer data.</p></div>
+    </div>
+  </section>
+</main>
+
+<script src="data/site.js"></script>
+<script src="data/runs_local.js"></script>
+<script src="data/runs_terra.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  "use strict";
+  const { el, svg, AP_LABEL, pct } = APP;
+  const S = window.SITE, SUM = S.summary;
+  APP.frame("index.html");
+  const M = Object.fromEntries(S.models.map((m) => [m.key, m]));
+  const h = (k, a) => SUM[k][a];
+
+  // answer box, with every number read from the results
+  document.getElementById("answer").innerHTML =
+    `<p><strong>Short answer.</strong> On a small local model (${M.local.label}) no design beats another: ` +
+    `${h("local", "fixed").held_correct}, ${h("local", "single").held_correct} and ${h("local", "multi").held_correct} of 45 held-out runs correct.</p>` +
+    `<p>On a stronger hosted model (${M.terra.label}) a single agent with four tools gets <strong>${h("terra", "single").held_correct} of 45</strong>. ` +
+    `The multi-agent team gets <strong>${h("terra", "multi").held_correct}</strong>: its specialists find the evidence, and the coordinator then declines to commit.</p>`;
+
+  // hero: one real run on the architecture
+  const hs = S.scenarios.s06, hr = APP.runs("terra").find((r) => r.s === "s06" && r.a === "multi" && r.i === 0);
+  const topo = APP.topology(document.getElementById("hero-topo"));
+  topo.update(APP.runStates(hs, hr));
+  const dbq = hr.steps.filter((s) => s.node === "chess-db").length;
+  document.getElementById("hero-cap").innerHTML =
+    `<b>${hs.short}, ${hs.title.toLowerCase()}.</b> The multi-agent team on ${M.terra.label} queried chess-db ${dbq} times ` +
+    `(${hr.tools} tool calls in all), named the query-plan change in its summary, and answered “insufficient evidence”. Red is what broke; blue glow is where it looked. ` +
+    `<a href="${APP.consoleLink("s06", "terra", "multi", 0)}">Replay it</a>`;
+
+  // setup strip
+  const nRuns = S.models.reduce((a, m) => a + m.runs, 0);
+  document.getElementById("setup").innerHTML =
+    `<span><b>18</b>incidents</span><span class="x">×</span><span><b>3</b>designs</span><span class="x">×</span>` +
+    `<span><b>2</b>models</span><span class="x">×</span><span><b>3</b>repeats</span><span class="x">=</span><span><b>${nRuns}</b>runs</span>`;
+
+  // finding 1: held-out accuracy, small multiples by model
+  const acc = document.getElementById("acc");
+  for (const m of S.models) {
+    const box = el("div", { class: "panel panel-pad" }, el("div", { class: "sm-title", text: `${m.label} · ${m.where}` }));
+    APP.bars(box, S.approaches.map((a) => ({
+      label: AP_LABEL[a], value: h(m.key, a).held_correct / h(m.key, a).held_n, cls: "ap-" + a,
+      note: `${h(m.key, a).held_correct} / ${h(m.key, a).held_n}`, fmt: null,
+      tip: `<b>${AP_LABEL[a]} · ${m.label}</b><br>${h(m.key, a).held_correct} of ${h(m.key, a).held_n} held-out runs correct<br>all 18 incidents: ${h(m.key, a).correct} of ${h(m.key, a).n}`,
+    })), { max: 1, fmt: (v) => Math.round(v * 100) + "%", title: `Held-out accuracy, ${m.label}` });
+    acc.append(box);
+  }
+  const legend = (host, items) => host.replaceChildren(...items.map(([cls, label]) => el("span", {}, el("i", { class: "ap-swatch " + cls }), label)));
+  legend(document.getElementById("acc-legend"), S.approaches.map((a) => ["ap-" + a, AP_LABEL[a]]));
+
+  // finding 2: cost vs accuracy
+  const pts = [];
+  for (const m of S.models) for (const a of S.approaches) {
+    const x = h(m.key, a);
+    pts.push({ label: `${APP.AP_SHORT[a]} · ${m.key === "local" ? "local" : "terra"}`, x: x.cost_per_run, y: x.held_correct / x.held_n, cls: "ap-" + a, hollow: m.key === "local",
+      dy: m.key === "local" ? (a === "single" ? 16 : a === "multi" ? -9 : 4) : 4,
+      tip: `<b>${AP_LABEL[a]} · ${m.label}</b><br>${pct(x.held_correct, x.held_n)} held-out correct<br>${APP.money(x.cost_per_run)} per run · ${x.latency} s agent time<br>${x.tok_in.toLocaleString()} tokens in / ${x.tok_out.toLocaleString()} out` });
+  }
+  APP.scatter(document.getElementById("scatter"), pts, { title: "Held-out accuracy against cost per run" });
+
+  // finding 3: how runs ended
+  const rows = [];
+  for (const m of S.models) for (const a of S.approaches) {
+    const x = h(m.key, a);
+    rows.push({ label: `${APP.AP_SHORT[a]} · ${m.key === "local" ? "local" : "terra"}`, parts: [
+      { key: "ok", value: x.correct }, { key: "abst", value: x.false_abstain }, { key: "wrong", value: x.n - x.correct - x.false_abstain }] });
+  }
+  const PS = { ok: { fill: "var(--right)", label: "correct" }, abst: { fill: "var(--gap)", label: "abstained wrongly" }, wrong: { fill: "var(--blamed)", label: "wrong cause, or wrongly committed", ink: "#1d1400" } };
+  APP.stacked(document.getElementById("stacked"), rows, PS, { title: "How runs ended" });
+  document.getElementById("stacked-legend").replaceChildren(...Object.values(PS).map((p) => el("span", {}, el("i", { class: "dot", style: `background:${p.fill}` }), p.label)));
+
+  // finding cards, numbers computed from the runs
+  const terra = APP.runs("terra"), local = APP.runs("local");
+  const mean = (xs) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
+  const ABST = new Set(["s11", "s12", "s18"]);
+  const mFa = terra.filter((r) => r.a === "multi" && !ABST.has(r.s) && r.category === "insufficient_evidence");
+  const mOk = terra.filter((r) => r.a === "multi" && !ABST.has(r.s) && r.ok);
+  const abstCases = (k, a) => SUM[k][a].abstain_cases;
+  const s18 = terra.filter((r) => r.s === "s18" && r.a === "single");
+  const cards = [
+    { big: `${Math.round(100 * mean(mFa.map((r) => r.key_seen)))}%`, unit: "of key evidence seen",
+      h: "The team had the evidence and still abstained",
+      p: `All ${h("terra", "multi").n - h("terra", "multi").correct} of the multi-agent team's misses on ${M.terra.label} are abstentions. In those runs its specialists had seen ${Math.round(100 * mean(mFa.map((r) => r.key_seen)))}% of the key evidence, more than in the runs it got right (${Math.round(100 * mean(mOk.map((r) => r.key_seen)))}%). The coordinator reads summaries, not the evidence itself, and asks for more certainty than the answer needs.`,
+      link: APP.consoleLink("s06", "terra", "multi", 0), lt: "Replay s06, multi-agent" },
+    { big: `${h("local", "fixed").held_correct} → ${h("terra", "fixed").held_correct}`, unit: "of 45",
+      h: "A better model exposed the fixed pipeline's blind spots",
+      p: `The fixed pipeline always reads the same window of logs and metrics. ${M.local.label} guessed from it; ${M.terra.label} notices the evidence is not there and abstains (${h("terra", "fixed").false_abstain} of ${h("terra", "fixed").nonab_n} runs with a real cause). Arguably more honest, and scored as wrong.`,
+      link: APP.consoleLink("s02", "terra", "fixed", 0), lt: "Replay s02, fixed pipeline" },
+    { big: `${h("local", "single").knowledge_runs} → ${h("terra", "single").knowledge_runs}`, unit: "of 54 runs",
+      h: "Whether RAG was used depended on the model, not the prompt",
+      p: `The single agent's prompt says to search the knowledge base before answering. ${M.local.label} did it in ${h("local", "single").knowledge_runs} of 54 runs; ${M.terra.label} in ${h("terra", "single").knowledge_runs} of 54, with the same prompt.`,
+      link: APP.consoleLink("s05", "terra", "single", 0), lt: "Replay s05, single agent" },
+    { big: `${abstCases("local", "fixed").correct} vs ${abstCases("local", "single").correct}`, unit: `of ${abstCases("local", "fixed").n}`,
+      h: "Agents know when to say “I don't know”",
+      p: `On the three incidents with no single answer, the fixed pipeline on ${M.local.label} always guessed a cause (${abstCases("local", "fixed").correct} of ${abstCases("local", "fixed").n} correct); both agents abstained correctly in ${abstCases("local", "single").correct} and ${abstCases("local", "multi").correct} of ${abstCases("local", "single").n}. Letting the model choose where to look bought calibrated abstention before it bought better diagnosis.`,
+      link: APP.consoleLink("s12", "local", "fixed", 0), lt: "Replay s12, fixed pipeline" },
+    { big: `${Math.round(h("terra", "multi").tools)} vs ${Math.round(h("terra", "single").tools)}`, unit: "tool calls per run",
+      h: "More looking is not better looking",
+      p: `On ${M.terra.label} the team makes ${(h("terra", "multi").tools / h("terra", "single").tools).toFixed(1)}× as many tool calls as the single agent and costs ${(h("terra", "multi").cost_per_run / h("terra", "single").cost_per_run).toFixed(1)}× as much per run, for ${h("terra", "single").held_correct - h("terra", "multi").held_correct} fewer correct held-out runs.`,
+      link: APP.consoleLink("s17", "terra", "multi", 0), lt: "Replay s17, multi-agent" },
+    { big: `${s18.filter((r) => r.ok).length} / ${s18.length}`, unit: "single agent on s18", open: true,
+      h: "Open question: is s18 really balanced?",
+      p: `s18 is meant to have two equally likely causes in the same minute, so the right answer is to abstain. The single agent on ${M.terra.label} never did: every run read the allocator config change as the cause of the missing CPU samples that follow it. Under review with the incident-response expert.`,
+      link: APP.consoleLink("s18", "terra", "single", 0), lt: "Replay s18, single agent" },
+  ];
+  document.getElementById("findings").replaceChildren(...cards.map((c) => el("article", { class: "panel finding" + (c.open ? " open" : "") },
+    el("div", { class: "big" }, c.big, " ", el("small", { text: c.unit })), el("h3", { text: c.h }), el("p", { text: c.p }), el("a", { href: c.link, text: c.lt + " →" }))));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Incident Copilot Results</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,500..800&family=JetBrains+Mono:wght@400;600;700&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<style>
+  :root { --h0: #eef1f5; --h1: #b7d3f6; --h2: #5598e7; --h3: #1c5cab; --h-ink: #0b1420; --h-ink-strong: #ffffff; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --h0: #1b242e; --h1: #184f95; --h2: #3987e5; --h3: #86b6ef; --h-ink: #e8edf2; --h-ink-strong: #0b1420; } }
+  :root[data-theme="dark"] { --h0: #1b242e; --h1: #184f95; --h2: #3987e5; --h3: #86b6ef; --h-ink: #e8edf2; --h-ink-strong: #0b1420; }
+  .heat td.cell { padding: 0; text-align: center; vertical-align: middle; }
+  .heat td.cell a { display: block; padding: 8px 0; font: 700 0.85rem/1 var(--font-mono); text-decoration: none; color: var(--h-ink); }
+  .heat td.c0 { background: var(--h0); } .heat td.c1 { background: var(--h1); }
+  .heat td.c2 { background: var(--h2); } .heat td.c2 a, .heat td.c3 a { color: var(--h-ink-strong); }
+  .heat td.c3 { background: var(--h3); }
+  .heat td.cell { border-left: 2px solid var(--surface); }
+  .heat td.cell a:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .heat th.grp { text-align: center; border-left: 2px solid var(--surface); }
+  .heat .tier td { background: var(--surface-2); font: 600 0.7rem/1 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); padding-block: 7px; }
+  .heat td.scn { white-space: nowrap; }
+  .heat td.scn small { color: var(--ink-3); display: block; font-size: 0.8rem; white-space: normal; max-width: 34ch; }
+  .heat-key { display: flex; gap: 4px; align-items: center; font-size: var(--step--1); color: var(--ink-2); flex-wrap: wrap; }
+  .heat-key i { width: 26px; height: 16px; display: inline-block; border-radius: 3px; }
+  .big-table td:first-child { white-space: nowrap; }
+  .big-table td:first-child .row { flex-wrap: nowrap; }
+  .sign { padding: 16px 18px; display: grid; gap: 8px; }
+  .sign .big { font: 700 var(--step-3)/1 var(--font-display); font-stretch: 90%; }
+  .best { font-weight: 700; color: var(--ink); }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <section class="section" style="padding-top: 8px">
+    <p class="eyebrow">Results</p>
+    <h1 style="font-size: var(--step-3)">Every run, every configuration</h1>
+    <p class="lede">Two full evaluations with the same frozen prompts, tools, step caps and judge. Only the model driving the agents differs.</p>
+    <div class="table-wrap"><table id="meta"></table></div>
+  </section>
+
+  <section class="section">
+    <div class="figure-head">
+      <h2>Summary</h2>
+      <p>Category accuracy is scored by code against the ground truth. Judge columns (0 to 2) come from an LLM judge and are <span class="chip pending">pending validation</span> against hand labels.</p>
+    </div>
+    <div class="table-wrap"><table class="big-table" id="summary"></table></div>
+  </section>
+
+  <section class="section">
+    <div class="figure-head">
+      <h2>Incident by incident</h2>
+      <p>Runs with the right category, out of 3, for each incident and configuration. Click a cell to replay its first run.</p>
+    </div>
+    <div class="heat-key" id="heat-key"></div>
+    <div class="table-wrap"><table class="heat" id="heat"></table></div>
+  </section>
+
+  <section class="section">
+    <div class="figure-head">
+      <h2>Is the difference real?</h2>
+      <p>The three repeats of one incident are not independent tries, so comparing 45 runs against 45 overstates the evidence. Counting incidents instead: on how many did one design beat the other?</p>
+    </div>
+    <div class="grid-2" id="sign"></div>
+  </section>
+</main>
+
+<script src="data/site.js"></script>
+<script src="data/runs_local.js"></script>
+<script src="data/runs_terra.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function () {
+  "use strict";
+  const { el, AP_LABEL, pct, money } = APP;
+  const S = window.SITE, SUM = S.summary;
+  APP.frame("results.html");
+
+  document.getElementById("meta").append(
+    el("thead", {}, el("tr", {}, ["model", "where it ran", "runs", "wall-clock", "judge", "code", "prompts"].map((t) => el("th", { text: t })))),
+    el("tbody", {}, S.models.map((m) => el("tr", {}, el("td", {}, el("b", { text: m.label })), el("td", { text: m.where }), el("td", { class: "n", text: m.runs }),
+      el("td", { class: "n", text: m.wall_clock_min + " min" }), el("td", { class: "mono", text: m.judge }), el("td", { class: "mono", text: m.commit }), el("td", { class: "mono", text: m.prompts })))));
+
+  // summary table
+  const cols = [
+    ["held-out correct", (x) => `${x.held_correct}/${x.held_n}`, (x) => x.held_correct / x.held_n],
+    ["all 18", (x) => pct(x.correct, x.n)],
+    ["easy", (x) => pct(x.tiers.easy.correct, x.tiers.easy.n)],
+    ["medium", (x) => pct(x.tiers.medium.correct, x.tiers.medium.n)],
+    ["hard", (x) => pct(x.tiers.hard.correct, x.tiers.hard.n)],
+    ["no-answer cases", (x) => `${x.abstain_cases.correct}/${x.abstain_cases.n}`],
+    ["abstained wrongly", (x) => `${x.false_abstain}/${x.nonab_n}`],
+    ["judge action*", (x) => x.judge_action?.toFixed(2) ?? "n/a"],
+    ["judge evidence*", (x) => x.judge_evidence?.toFixed(2) ?? "n/a"],
+    ["key evidence cited", (x) => Math.round(x.key_cited * 100) + "%"],
+    ["citations valid", (x) => (x.cite_valid == null ? "n/a" : Math.round(x.cite_valid * 100) + "%")],
+    ["knowledge base used", (x) => `${x.knowledge_runs}/${x.n}`],
+    ["tool calls", (x) => x.tools.toFixed(1)],
+    ["tokens in / out", (x) => `${x.tok_in.toLocaleString()} / ${x.tok_out.toLocaleString()}`],
+    ["cost / run", (x) => money(x.cost_per_run)],
+    ["agent time", (x) => x.latency.toFixed(1) + " s"],
+  ];
+  const sumT = document.getElementById("summary");
+  sumT.append(el("thead", {}, el("tr", {}, el("th", { text: "configuration" }), cols.map(([t]) => el("th", { class: "n", text: t })))));
+  const tb = el("tbody");
+  for (const m of S.models) {
+    const best = Math.max(...S.approaches.map((a) => cols[0][2](SUM[m.key][a])));
+    for (const a of S.approaches) {
+      const x = SUM[m.key][a];
+      tb.append(el("tr", {}, el("td", {}, el("span", { class: "row", style: "gap: 8px" }, el("i", { class: "ap-swatch ap-" + a }), `${AP_LABEL[a]} · ${m.label}`)),
+        cols.map(([, f, v], i) => el("td", { class: "n" + (i === 0 && v(x) === best ? " best" : ""), text: f(x) }))));
+    }
+  }
+  sumT.append(tb);
+
+  // heatmap
+  const configs = [];
+  for (const m of S.models) for (const a of S.approaches) configs.push([m, a]);
+  document.getElementById("heat-key").append("runs correct out of 3:", ...[0, 1, 2, 3].map((v) => el("span", { class: "row", style: "gap: 4px; margin-left: 8px" }, el("i", { style: `background: var(--h${v})` }), String(v))));
+  const H = document.getElementById("heat");
+  H.append(el("thead", {},
+    el("tr", {}, el("th", { text: "" }), S.models.map((m) => el("th", { class: "grp", colspan: 3, text: m.label }))),
+    el("tr", {}, el("th", { text: "incident" }), configs.map(([, a]) => el("th", { class: "grp" }, el("span", { class: "row", style: "gap: 6px; justify-content: center" }, el("i", { class: "ap-swatch ap-" + a }), APP.AP_SHORT[a]))))));
+  const hb = el("tbody");
+  for (const t of ["easy", "medium", "hard"]) {
+    hb.append(el("tr", { class: "tier" }, el("td", { colspan: 7, text: t })));
+    for (const id of Object.keys(S.scenarios).sort().filter((x) => S.scenarios[x].difficulty === t)) {
+      const sc = S.scenarios[id];
+      hb.append(el("tr", {},
+        el("td", { class: "scn" }, el("b", { class: "mono", text: id }), sc.dev ? el("span", { class: "chip dev", style: "margin-left: 6px", text: "dev" }) : null, el("small", { text: sc.title })),
+        configs.map(([m, a]) => {
+          const v = SUM[m.key][a].per_scenario[id];
+          return el("td", { class: "cell c" + v }, el("a", { href: APP.consoleLink(id, m.key, a, 0), "aria-label": `${id} ${m.label} ${a}: ${v} of 3 correct`,
+            onmousemove: (e) => APP.tip(e, `<b>${id} · ${AP_LABEL[a]} · ${m.label}</b><br>${v} of 3 runs correct<br>${APP.esc(sc.title)}`), onmouseleave: APP.untip }, String(v)));
+        })));
+    }
+  }
+  H.append(hb);
+
+  // incident-level comparison with a two-sided sign test
+  function binom2(k, n) {
+    const c = (n, r) => { let x = 1; for (let i = 1; i <= r; i++) x = (x * (n - r + i)) / i; return x; };
+    let p = 0;
+    for (let i = 0; i <= Math.min(k, n - k); i++) p += c(n, i);
+    return Math.min(1, (2 * p) / Math.pow(2, n));
+  }
+  const host = document.getElementById("sign");
+  const ids = Object.keys(S.scenarios).sort();
+  for (const [m, a, b] of [["terra", "single", "multi"], ["terra", "single", "fixed"], ["local", "single", "multi"], ["local", "multi", "fixed"]]) {
+    for (const heldOnly of [false]) {
+      const xs = ids.filter((id) => !heldOnly || !S.scenarios[id].dev);
+      const A = xs.filter((id) => SUM[m][a].per_scenario[id] > SUM[m][b].per_scenario[id]);
+      const B = xs.filter((id) => SUM[m][a].per_scenario[id] < SUM[m][b].per_scenario[id]);
+      const p = binom2(B.length, A.length + B.length);
+      host.append(el("div", { class: "panel sign" },
+        el("p", { class: "eyebrow", text: `${APP.model(m).label} · ${AP_LABEL[a]} vs ${AP_LABEL[b]}` }),
+        el("div", { class: "big", text: `${A.length} – ${B.length}` }),
+        el("p", { class: "muted", text: `${AP_LABEL[a]} better on ${A.length} incidents${A.length ? " (" + A.join(", ") + ")" : ""}; ${AP_LABEL[b]} better on ${B.length}${B.length ? " (" + B.join(", ") + ")" : ""}; tied on ${xs.length - A.length - B.length}.` }),
+        el("p", { text: A.length + B.length ? `Sign test, two-sided: p ≈ ${p < 0.001 ? p.toExponential(1) : p.toFixed(3)}` : "No incident differs." })));
+    }
+  }
+})();
+</script>
+</body>
+</html>
