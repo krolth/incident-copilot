@@ -17,6 +17,49 @@ creation time and end is the last write to its `runs.jsonl` (reconstructed, mark
 is wall-clock minus summed agent latency, valid only because the batches ran one run at a time. From the next
 batch on, `meta.json` records start, end, wall-clock, judge latency per run, git commit and a prompts hash.
 
+## 2026-10-29 · results_openai · FULL EVALUATION on a hosted model (gpt-6.1-terra)
+
+- **Changed since `results`:** only the agent model: `gpt-6.1-terra` (OpenAI, `reasoning_effort=low`) instead of
+  `gpt-oss:20b`. Same frozen prompts (`b6f1da57e141`), step caps (12 / 8), judge (`qwen3.8:27b`, local), embeddings
+  (`nomic-embed-text`, local), scenarios (`d7ec9b24e672`). No re-tuning for the new model. Owner approved, ≤ $10.
+- **Code:** commit `a9cf7b6`, clean. Run in two phases into one folder: all 54 cells × 1 run, then repeats 2 and 3
+  (`--resume`), so a spending cap ($9.50, `--max-cost-usd`) could only cut repeats, never whole scenarios.
+  `meta_phase1.json` is phase 1; `meta.json` (and the report header) is phase 2 only. **n:** 162, none skipped.
+- **Runtime (recorded):** 20:53 to 23:45 PDT; wall-clock 57.6 + 114.5 = 172.1 min; agent 65.3 min, judge
+  106.7 min (phase 2: report header; phase 1 not in it). Mean agent latency: fixed 4.6 s, single 20.0 s, multi 48.0 s.
+- **Cost:** agent API spend $7.77 at list price (fixed $0.26, single $1.91, multi $5.60; `priced_spend_usd` in
+  `meta.json` covers both phases). Ignores the cached-input discount, so real billing is lower; check the OpenAI
+  dashboard. The judge is local and not in this figure. Smoke test before it (`results_openai_smoke`, s01 × 3, plumbing only): $0.15.
+
+| approach | category acc | held-out (n=45) | dev (n=9) | easy | medium | hard | false abstain | judge action | judge evidence | key cited | tool calls | tokens in/out | cost/run | latency s |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| fixed | 18/54 (33%) | 9/45 (20%) | 100% | 33% | 17% | 50% | 36/45 | 0.76 | 1.48 | 24% | 10.1 | 3337/289 | $0.0048 | 4.6 |
+| single | 51/54 (94%) | 42/45 (93%) | 100% | 100% | 100% | 83% | 0/45 | 1.67 | 1.91 | 79% | 16.7 | 30263/1013 | $0.0353 | 20.0 |
+| multi | 36/54 (67%) | 28/45 (62%) | 89% | 89% | 44% | 67% | 18/45 | 1.22 | 1.74 | 58% | 59.3 | 74434/5862 | $0.1037 | 48.0 |
+
+"False abstain": `insufficient_evidence` on one of the 45 runs that have a real cause.
+
+- **Headline:** with a stronger model the approaches separate. Held-out: single 42/45, multi 28/45, fixed 9/45
+  (Fisher, runs treated as independent: single vs multi p≈0.0007, multi vs fixed p≈0.0001). The repeats of one
+  scenario are not independent, so also at scenario level: single beats multi on 8 scenarios, multi beats single on
+  1 (s18); sign test p≈0.04 (held-out only: 7 vs 1, p≈0.07). Multi costs ~3x single and is slower.
+- **Run-to-run variance:** fixed 0.0 pts, single 0.0, multi 7.9 (61%, 61%, 78%).
+- **Single: every miss is s18** (0/3, all bad_change). All three runs read the `cs-53001` allocator change
+  (least_games → least_cpu at 15:05) as causing the "missing CPU samples" warnings that follow it. **Owner to
+  review:** is that a fair causal reading of the scenario (then s18 is not balanced), or a confident wrong guess?
+- **Multi: every miss is a false abstention (18/18), and they are not search failures.** In those runs the workers
+  had seen 91% of the key evidence on average, more than in multi's correct runs (83%). Example s06 #0: the summary
+  names the plan flip and the chess-db CPU rise (the right diagnosis), then abstains because "the trigger for the
+  query-plan change is unknown". The coordinator demands more certainty than the answer needs.
+- **Fixed: 36/45 false abstentions, apparently honest ones.** Its standard data window lacks the evidence (s02:
+  "the data does not identify the two affected hosts"). gpt-oss guessed from the same window and was right 47% of
+  the time; terra declines to guess. Fixed is right only on s01, s08, s13 and the three abstain cases (3/3 each).
+- **Behaviour change with the model:** single searched the knowledge base in 54/54 runs (gpt-oss: 2/54, same
+  prompt). Citations 100% valid for all three approaches; no retries, errors or step-cap hits.
+- **Multi made 59 tool calls per run** (single 17): workers issue several calls per step. More looking, worse answers.
+- **Not yet done:** hand labels (judge columns unvalidated); owner review of s18; read the multi coordinator's
+  synthesis prompts against the single agent's for a wording difference that could explain the abstentions.
+
 ## 2026-10-26 · results · FULL EVALUATION, all 18 scenarios
 
 - **Changed since dev5:** `resource_leak` definition aligned with RB-03 (`3e341fd`); prompts frozen (`0d1a715`).

@@ -11,6 +11,30 @@ Template:
 - **Surprise / failure:** what didn't work, and what I think caused it
 - **Next:** what I'll try
 
+## 2026-10-29: hosted-model evaluation (gpt-6.1-terra, 162 runs; details in `docs/run-log.md`)
+- **Decision:** re-run everything with only the agent model changed (same frozen prompts, caps, local judge and
+  embeddings), to tell "model limit" from "architecture". No re-tuning: tuning per model would change two things.
+- **Decision:** two phases (1 run per cell, then repeats) under a $9.50 cap that spans `--resume`, so running out
+  of budget could only cost repeats, not scenarios. Spent $7.77 at list price; no runs skipped.
+- **Evidence:** held-out single 42/45, multi 28/45, fixed 9/45. On gpt-oss all three were ~21/45. With a capable
+  model, the single agent is clearly best; multi is worse than single at ~3x the cost.
+- **Answer to the open question from 2026-10-27:** it was both. The model was the limit for the single agent
+  (21 → 42 of 45) and the architecture is the limit for multi: multi's misses are all false abstentions, and in
+  those runs its workers had seen *more* of the key evidence (91%) than in its correct runs (83%). The handoff/
+  synthesis hypothesis survives; "splitting hides signals" does not explain it (the evidence was found).
+- **Surprise:** the fixed pipeline got *worse* with the better model (21 → 9 of 45): terra abstains when the fixed
+  data window lacks the evidence, where gpt-oss guessed. A stronger model makes the fixed pipeline's blind spots
+  visible instead of papering over them. Arguably the more honest behaviour, scored as wrong.
+- **Surprise:** the same "search the knowledge base first" instruction was followed 54/54 times by terra and 2/54 by
+  gpt-oss. Instruction-following, not the prompt, decided whether RAG was used.
+- **Open, for the owner:** single's only misses are s18 (3/3 bad_change): it reads the allocator change as causing
+  the missing-CPU-sample warnings. If that reading is fair, s18 is not the balanced two-cause case it is meant to be.
+- **Hypothesis, untested:** the coordinator's synthesis prompt has one sentence the single agent's lacks ("absence in
+  a specialist's finding is not evidence", added in dev to fix routing). It may push the coordinator to abstain.
+  Testing it means changing a frozen prompt and re-running multi: a follow-up, not something to fold into results.
+- **Write-up caveat:** repeats of one scenario are not independent, so quote the scenario-level comparison (single
+  better on 8 scenarios, multi on 1; sign test p≈0.04) next to the run-level Fisher p-values.
+
 ## 2026-10-27: full local evaluation (162 runs; details in `docs/run-log.md`)
 - **Evidence:** held-out category accuracy fixed 21/45, single 21/45, multi 22/45. No difference between
   approaches; multi costs ~8x the tokens and ~9x the latency of fixed. Dev accuracy was 67 to 89%, so the
