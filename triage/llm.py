@@ -5,7 +5,8 @@
   LLM_TEMPERATURE optional float; omit it to use the provider default (some models reject a temperature)
   JUDGE_MODEL    model for the LLM-as-judge; use a DIFFERENT model than LLM_MODEL when you can
   JUDGE_PROVIDER optional; defaults to LLM_PROVIDER
-  LLM_REASONING  optional reasoning setting for the agent model: true | false | low | medium | high.
+  LLM_REASONING  optional reasoning setting for the agent model: true | false | low | medium | high
+                 (openai: low | medium | high only, sent as reasoning_effort).
                  Ollama only for now. gpt-oss at its default (medium) returned an empty or broken structured
                  reply 8% of the time in a replay test; at low, 0 of 120 (see docs/LEARNING_LOG.md).
   JUDGE_REASONING same, for the judge model (false turns off qwen's thinking: faster, check against hand labels)
@@ -26,11 +27,15 @@ from langchain_core.language_models.chat_models import BaseChatModel
 
 def _build(provider: str, model: str, temperature: float | None, reasoning: bool | str | None = None) -> BaseChatModel:
     kwargs = {} if temperature is None else {"temperature": temperature}
-    if reasoning is not None and provider != "ollama":
-        # fail loudly rather than let a run look like it used a setting it did not
-        raise ValueError(f"LLM_REASONING/JUDGE_REASONING is only wired for ollama so far, not {provider!r}")
+    # fail loudly rather than let a run look like it used a setting it did not
+    if reasoning is not None and provider not in ("ollama", "openai"):
+        raise ValueError(f"LLM_REASONING/JUDGE_REASONING is not wired for {provider!r}")
     if provider == "openai":
         from langchain_openai import ChatOpenAI
+        if isinstance(reasoning, bool):
+            raise ValueError("openai takes a reasoning effort (low | medium | high), not true/false")
+        if reasoning:
+            kwargs["reasoning_effort"] = reasoning
         return ChatOpenAI(model=model, **kwargs)
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
@@ -79,6 +84,7 @@ def get_judge_llm() -> BaseChatModel:
 def describe() -> dict:
     load_dotenv()
     return {"provider": os.getenv("LLM_PROVIDER", "openai"), "model": os.getenv("LLM_MODEL", ""),
-            "judge_model": os.getenv("JUDGE_MODEL", ""), "embeddings": os.getenv("EMBEDDINGS", "local"),
+            "judge_model": os.getenv("JUDGE_MODEL", ""),
+            "judge_provider": os.getenv("JUDGE_PROVIDER", os.getenv("LLM_PROVIDER", "openai")), "embeddings": os.getenv("EMBEDDINGS", "local"),
             "reasoning": os.getenv("LLM_REASONING", ""), "judge_reasoning": os.getenv("JUDGE_REASONING", ""),
             "num_ctx": os.getenv("OLLAMA_NUM_CTX", "") or None}

@@ -3,14 +3,40 @@
   "_local_models": "Local Ollama models are priced at a shadow rate, not $0: the median per-token price across hosted providers serving the same open-weight model (input and output medians taken separately). It stands for what the same work would cost from a vendor, so local and API runs stay comparable. min/max give the provider range for sensitivity. Source: OpenRouter /api/v1/models/<id>/endpoints, retrieved 2026-10-25.",
   "models": {
     "gpt-oss:20b": {
-      "input_per_mtok": 0.03, "output_per_mtok": 0.15,
-      "basis": "shadow: median of 11 hosted providers (openai/gpt-oss-20b)", "retrieved": "2026-10-25",
-      "input_range": [0.018, 0.075], "output_range": [0.09, 0.30]
+      "input_per_mtok": 0.03,
+      "output_per_mtok": 0.15,
+      "basis": "shadow: median of 11 hosted providers (openai/gpt-oss-20b)",
+      "retrieved": "2026-10-25",
+      "input_range": [
+        0.018,
+        0.075
+      ],
+      "output_range": [
+        0.09,
+        0.3
+      ]
     },
     "qwen3.8:27b": {
-      "input_per_mtok": 0.18, "output_per_mtok": 2.30,
-      "basis": "shadow: median of 21 hosted providers (qwen/qwen3.8-27b)", "retrieved": "2026-10-25",
-      "input_range": [0.02, 0.99], "output_range": [0.50, 3.20]
+      "input_per_mtok": 0.18,
+      "output_per_mtok": 2.3,
+      "basis": "shadow: median of 21 hosted providers (qwen/qwen3.8-27b)",
+      "retrieved": "2026-10-25",
+      "input_range": [
+        0.02,
+        0.99
+      ],
+      "output_range": [
+        0.5,
+        3.2
+      ]
+    },
+    "gpt-6.1-terra": {
+      "input_per_mtok": 1.0,
+      "output_per_mtok": 5.0,
+      "cached_input_per_mtok": 0.05,
+      "basis": "OpenAI list price, standard tier, short context",
+      "retrieved": "2026-10-29"
     }
-  }
+  },
+  "_api_models": "API models: OpenAI standard tier, developers.openai.com/api/docs/pricing, retrieved 2026-10-29. Cost ignores the cached-input discount, so it overstates spend (safe for --max-cost-usd)."
 }

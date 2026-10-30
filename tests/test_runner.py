@@ -68,3 +68,22 @@ def test_prompts_hash_covers_category_definitions(monkeypatch):
     before = code_version()["prompts_sha256"]
     monkeypatch.setattr(P, "RULES", P.RULES.replace("bad_change", "bad_change!"))
     assert code_version()["prompts_sha256"] != before
+
+
+def test_spending_cap_stops_new_runs(tmp_path, monkeypatch):
+    import triage.evals.runner as runner
+    # price the fake model so its first run alone exceeds a 1-cent cap
+    monkeypatch.setattr(runner, "load_pricing", lambda: {"fake-oracle": {"input_per_mtok": 1e4, "output_per_mtok": 1e4}})
+    out = tmp_path / "capped"
+    recs = run_all(str(out), ["fixed"], ["s01", "s08", "s13"], 1, fake=True, parallel=1, max_cost_usd=0.01)
+    meta = json.loads((out / "meta.json").read_text())
+    assert len(recs) == 1 and meta["runs_skipped_by_cap"] == 2 and meta["priced_spend_usd"] >= 0.01
+
+
+def test_openai_reasoning_effort(monkeypatch):
+    import pytest
+    from triage.llm import _build
+    monkeypatch.setenv("OPENAI_API_KEY", "test-not-a-key")
+    assert _build("openai", "some-model", None, "low").reasoning_effort == "low"
+    with pytest.raises(ValueError):
+        _build("openai", "some-model", None, False)

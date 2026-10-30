@@ -26,7 +26,7 @@ from triage.approaches import APPROACHES
 from triage.approaches.common import BACKOFF_BASE_S, BACKOFF_CAP_S, MAX_RETRIES, MAX_STEPS, WORKER_STEPS, UsageTracker, execute
 from triage.env import Trace
 from triage.evals.judge import judge_run
-from triage.evals.scoring import load_pricing, score_run
+from triage.evals.scoring import cost_usd, load_pricing, score_run
 from triage.scenarios import all_scenarios, fingerprint, is_dev
 from triage.testing.fake_llm import FAKE_BANNER, oracle_llm
 
@@ -55,7 +55,7 @@ def code_version() -> dict:
 def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None, runs: int, *, fake: bool = False,
             fake_mode: str = "correct", persist_dir: str = "chroma_db", judge: bool = True, parallel: int = 2,
             resume: bool = False, max_steps: int = MAX_STEPS, worker_steps: int = WORKER_STEPS,
-            model_name: str = "") -> list[dict]:
+            model_name: str = "", max_cost_usd: float | None = None) -> list[dict]:
     from triage.knowledge.index import build_index, load_index
     from triage.llm import describe, get_judge_llm, get_llm
 
@@ -98,10 +98,20 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
 
     jobs = [(sc, a, i) for sc in scenarios for a in approaches for i in range(runs) if (sc.id, a, i) not in done]
     lock = threading.Lock()
+    # Spending cap for paid APIs: counts the agent's priced cost, plus the judge's when the judge is not local.
+    # Checked before each run starts, so the overshoot is at most the runs already in flight (--parallel).
+    judge_paid = not fake and describe()["judge_provider"] != "ollama"
+    spent = {"usd": 0.0, "skipped": 0}
+    if max_cost_usd is not None and not fake and cost_usd({"input_tokens": 1}, model_name, pricing) is None:
+        raise SystemExit(f"--max-cost-usd needs a price for {model_name!r} in pricing.json")
     f = open(runs_path, "a" if resume else "w")
 
     def work(job):
         sc, app, i = job
+        with lock:
+            if max_cost_usd is not None and spent["usd"] >= max_cost_usd:
+                spent["skipped"] += 1
+                return None
         rec = execute(APPROACHES[app], app, sc, llm_for(sc), retriever, i, {"max_steps": max_steps, "worker_steps": worker_steps}).to_json()
         rec["score"] = score_run(sc, rec, model_name, pricing)
         rec["judge"] = None
@@ -121,6 +131,9 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
         rec["difficulty"] = sc.difficulty
         rec["dev"] = is_dev(sc.id)  # prompts were tuned on it
         with lock:
+            spent["usd"] += rec["score"]["cost_usd"] or 0.0
+            if judge_paid:
+                spent["usd"] += cost_usd(rec.get("judge_usage", {}), describe()["judge_model"], pricing) or 0.0
             records.append(rec)
             f.write(json.dumps(rec) + "\n")
             f.flush()
@@ -133,6 +146,9 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
     with ThreadPoolExecutor(max_workers=max(1, parallel)) as pool:
         list(pool.map(work, jobs))
     f.close()
+    if spent["skipped"]:
+        print(f"STOPPED at the spending cap: ${spent['usd']:.2f} of ${max_cost_usd:.2f}; {spent['skipped']} runs not "
+              f"started (rerun with --resume and a higher cap to finish)", flush=True)
 
     finished = dt.datetime.now(dt.timezone.utc)
     meta = {"timestamp": finished.isoformat(), "started_at": started.isoformat(), "finished_at": finished.isoformat(),
@@ -141,10 +157,11 @@ def run_all(out_dir: str, approaches: list[str], scenario_ids: list[str] | None,
             "fake": fake, "fake_mode": fake_mode if fake else None,
             "model": model_name, "judge_model": "fake-oracle" if fake else describe()["judge_model"],
             "embeddings": "hash" if fake else describe()["embeddings"], "scenario_fingerprint": fingerprint(),
-            "llm_settings": None if fake else {k: describe()[k] for k in ("provider", "reasoning", "judge_reasoning", "num_ctx")},
+            "llm_settings": None if fake else {k: describe()[k] for k in ("provider", "judge_provider", "reasoning", "judge_reasoning", "num_ctx")},
             "retry_policy": {"max_retries": MAX_RETRIES, "backoff_base_s": BACKOFF_BASE_S, "backoff_cap_s": BACKOFF_CAP_S},
             "approaches": approaches, "runs_per_cell": runs, "max_steps": max_steps,
-            "worker_steps": worker_steps,
+            "worker_steps": worker_steps, "max_cost_usd": max_cost_usd, "priced_spend_usd": round(spent["usd"], 4),
+            "runs_skipped_by_cap": spent["skipped"],
             "scenarios": [s.id for s in scenarios], "note": FAKE_BANNER if fake else ""}
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
     return records
@@ -164,10 +181,11 @@ def main() -> None:
     ap.add_argument("--resume", action="store_true")
     ap.add_argument("--max-steps", type=int, default=MAX_STEPS, help="single-agent step cap")
     ap.add_argument("--worker-steps", type=int, default=WORKER_STEPS, help="step cap per multi-agent worker")
+    ap.add_argument("--max-cost-usd", type=float, help="stop starting new runs once priced spend reaches this")
     a = ap.parse_args()
     run_all(a.out or ("results_fake" if a.fake else "results"), a.approaches, a.scenarios, a.runs, fake=a.fake,
             fake_mode=a.fake_mode, persist_dir=a.persist_dir, judge=not a.no_judge, parallel=a.parallel,
-            resume=a.resume, max_steps=a.max_steps, worker_steps=a.worker_steps)
+            resume=a.resume, max_steps=a.max_steps, worker_steps=a.worker_steps, max_cost_usd=a.max_cost_usd)
 
 
 if __name__ == "__main__":

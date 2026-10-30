@@ -38,5 +38,5 @@ def test_reasoning_refused_where_not_wired(monkeypatch):
     monkeypatch.setenv("LLM_PROVIDER", "anthropic")
     monkeypatch.setenv("LLM_MODEL", "x")
     monkeypatch.setenv("LLM_REASONING", "low")
-    with pytest.raises(ValueError, match="only wired for ollama"):
+    with pytest.raises(ValueError, match="not wired for .anthropic."):
         get_llm()
