@@ -39,6 +39,7 @@ python -m triage.evals.runner --scenarios s01 --approaches single --runs 1   # f
 python -m triage.evals.runner --runs 3 --parallel 2                    # full evaluation -> results/
 python -m triage.evals.report results
 python -m triage.evals.labels export results/runs.jsonl labels.csv     # blind sheet; judge scores go to labels.judge.csv
+python -m triage.evals.grade labels.csv                                 # score the sheet one run at a time (resumable)
 python -m triage.evals.labels agreement labels.csv
 ```
 
