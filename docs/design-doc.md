@@ -1,6 +1,8 @@
 # Incident Triage Copilot: Single-Agent vs Multi-Agent
 
-Oct 24, 2026 · @Sharad Cornejo Altuzar
+Oct 24, 2026 · @Sharad Cornejo Altuzar · updated Oct 30, 2026 with the decisions made during implementation
+
+Results and a replay of every run: [krolth.github.io/incident-copilot](https://krolth.github.io/incident-copilot/)
 
 ## Problem Statement
 
@@ -65,9 +67,21 @@ Each approach runs all 18 incidents three times, so run-to-run variance is repor
 
 | Metric | How it is measured | Type |
 | --- | --- | --- |
-| Root-cause accuracy | Predicted category and failing component match the ground truth | Quantitative |
+| Root-cause accuracy | Predicted root-cause category matches the ground truth (the headline number). The failing component is recorded and shown with each run, but free-text component names are not scored | Quantitative |
 | Action correctness | LLM judge compares the recommended action to the reference runbook step | LLM judge |
 | Citation validity | Every cited log line, metric, or document exists and supports the claim | Quantitative + judge |
 | Abstention correctness | Says "insufficient evidence" on the 3 unanswerable incidents and not on the others | Quantitative |
 | Tokens, cost (USD), latency, tool calls | Logged per run from the run trace | Quantitative |
 | Retrieval hit rate | Expected runbook appears in the top-k when searching with each answerable incident's alert (what the fixed pipeline retrieves), and for the labeled diagnosis queries (used to choose chunk size and k) | Quantitative |
+
+## Decisions Made During Implementation
+
+The design above held. These are the parameters it left open, as run; the reasoning for each is in `docs/LEARNING_LOG.md` and the per-batch record in `docs/run-log.md`.
+
+- **Models:** the full evaluation was run twice with only the agent model changed: `gpt-oss:20b` locally (Ollama) and `gpt-6.1-terra` hosted (OpenAI API), both at low reasoning effort. The judge is `qwen3.8:27b` (local, thinking off) for both runs; embeddings are `nomic-embed-text`.
+- **Runs:** 18 incidents × 3 approaches × 3 repeats = 162 runs per model, 324 in all.
+- **Step caps:** 12 tool-loop steps for the single agent, 8 per multi-agent specialist. Every cap hit is recorded and reported.
+- **Retrieval:** 600-character chunks with 120 overlap, k = 4. On 25 labeled diagnosis queries the expected document is in the top 4 for 84% (hit@1 0.52, MRR 0.67). Section-based chunking was tried and scored lower.
+- **Prompts:** tuned on the three dev incidents (s01, s08, s11), then frozen before either full run; both runs use the same prompt hash.
+- **Retries:** a model call that fails or returns invalid output is retried up to 3 times with backoff; after that the run counts as failed.
+- **Ground truth:** frozen once real results existed; no scenario or rubric was changed to fit results.
