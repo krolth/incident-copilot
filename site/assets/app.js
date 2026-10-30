@@ -67,7 +67,7 @@
       <path d="M5 19.5h5l2-4 2 6 2-3h5" stroke="var(--accent)" stroke-width="1.6" fill="none" transform="translate(0 -1)"/></svg>`;
     const header = el("header", { class: "topbar" },
       el("div", { class: "topbar-inner" },
-        el("a", { class: "brand", href: "index.html", html: mark + `<span><span class="brand-name">Incident Copilot</span><br><span class="brand-sub">AI triage on the Fianchetto chess platform</span><br><span class="brand-by">Sharad Cornejo Altuzar</span><br><span class="brand-sub">Capstone project, AI Engineering cohort (RAG &amp; Agents)</span></span>` }),
+        el("a", { class: "brand", href: "index.html", html: mark + `<span><span class="brand-name">Incident Copilot</span><br><span class="brand-sub">AI triage on the Fianchetto chess platform</span><br><span class="brand-sub">Sharad Cornejo Altuzar · Capstone project RAG &amp; Agents</span></span>` }),
         el("nav", { class: "nav", "aria-label": "Pages" },
           PAGES.map(([href, label]) => el("a", { href, "aria-current": href === current ? "page" : null, text: label })))));
     document.body.prepend(header);
